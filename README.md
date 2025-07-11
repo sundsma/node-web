@@ -34,7 +34,6 @@ A full-stack web application for TGSU community with user authentication, event 
 
 ### Prerequisites
 - Node.js (v14 or higher)
-- MongoDB (local or cloud instance)
 - npm or yarn
 
 ### Installation
@@ -66,20 +65,17 @@ A full-stack web application for TGSU community with user authentication, event 
    MONGODB_URI=mongodb://localhost:27017/node-web
    ```
 
-5. **Start MongoDB**
-   Make sure MongoDB is running on your system.
-   Alternatively the website fallbacks to LowDB for file based DB
-        NO Installation Necessary!
 
-6. **Start the application**
+5. **Start the application**
    
    **Option 1: Start both servers simultaneously**
    ```bash
    # In one terminal - Backend
-   npm run dev
+   npm start
    
    # In another terminal - Frontend
-   npm run client
+   cd client
+   npm start
    ```
 
    **Option 2: Start separately**
@@ -91,7 +87,7 @@ A full-stack web application for TGSU community with user authentication, event 
    cd client && npm start
    ```
 
-7. **Access the application**
+6. **Access the application**
    - Frontend: http://localhost:3000
    - Backend API: http://localhost:5000
 
