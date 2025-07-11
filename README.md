@@ -34,7 +34,6 @@ A full-stack web application for TGSU community with user authentication, event 
 
 ### Prerequisites
 - Node.js (v14 or higher)
-- MongoDB (local or cloud instance)
 - npm or yarn
 
 ### Installation
