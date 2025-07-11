@@ -1,0 +1,374 @@
+/* Events Page Styles */
+.events-container {
+  min-height: 100vh;
+  padding: 40px 0;
+  background-color: var(--bg-color);
+}
+
+.events-header {
+  text-align: center;
+  margin-bottom: 40px;
+  position: relative;
+}
+
+.events-header h1 {
+  font-size: 2.5rem;
+  color: var(--text-color);
+  margin-bottom: 16px;
+}
+
+.events-header p {
+  font-size: 1.1rem;
+  color: var(--text-color);
+  opacity: 0.8;
+  margin-bottom: 24px;
+}
+
+.events-header .btn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.loading-state {
+  text-align: center;
+  padding: 80px 0;
+}
+
+.loading-state .loading {
+  width: 40px;
+  height: 40px;
+  border: 4px solid var(--border-color);
+  border-top-color: var(--primary-color);
+  margin: 0 auto 20px;
+}
+
+.loading-state p {
+  color: var(--text-color);
+  opacity: 0.7;
+  font-size: 1.1rem;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 80px 0;
+}
+
+.empty-state svg {
+  color: var(--primary-color);
+  margin-bottom: 20px;
+}
+
+.empty-state h3 {
+  color: var(--text-color);
+  margin-bottom: 12px;
+  font-size: 1.5rem;
+}
+
+.empty-state p {
+  color: var(--text-color);
+  opacity: 0.7;
+}
+
+/* Event Form Modal */
+.event-form-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.event-form-modal {
+  background: var(--card-bg);
+  border-radius: var(--border-radius);
+  width: 100%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+}
+
+.event-form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.event-form-header h3 {
+  color: var(--text-color);
+  margin: 0;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: var(--text-color);
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+}
+
+.close-btn:hover {
+  color: var(--danger-color);
+}
+
+.event-form {
+  padding: 24px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.form-control {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--input-border);
+  border-radius: var(--border-radius);
+  background-color: var(--input-bg);
+  color: var(--text-color);
+  font-size: 16px;
+  transition: var(--transition);
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+textarea.form-control {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  border-top: 1px solid var(--border-color);
+  padding-top: 20px;
+  margin-top: 20px;
+}
+
+/* Events Grid */
+.events-grid {
+  display: grid;
+  gap: 24px;
+  margin-bottom: 40px;
+}
+
+.event-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 24px;
+  transition: var(--transition);
+  box-shadow: var(--box-shadow);
+}
+
+.event-card:hover {
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.event-card.past-event {
+  opacity: 0.7;
+}
+
+.event-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.event-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-color);
+  margin: 0;
+}
+
+.event-organizer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-color);
+  opacity: 0.7;
+  font-size: 0.9rem;
+}
+
+.event-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.event-date,
+.event-location,
+.event-attendees {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-color);
+  opacity: 0.8;
+  font-size: 0.9rem;
+}
+
+.event-date svg,
+.event-location svg,
+.event-attendees svg {
+  color: var(--primary-color);
+}
+
+.event-description {
+  color: var(--text-color);
+  opacity: 0.9;
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+.event-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.tag {
+  background: var(--primary-color);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.event-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid var(--border-color);
+  padding-top: 16px;
+}
+
+.attendance-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.admin-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.admin-actions .btn {
+  padding: 8px 12px;
+  min-width: auto;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .events-container {
+    padding: 20px 0;
+  }
+
+  .events-header h1 {
+    font-size: 2rem;
+  }
+
+  .events-header .btn {
+    position: static;
+    margin-top: 16px;
+  }
+
+  .event-form-modal {
+    margin: 0;
+    border-radius: 0;
+    height: 100vh;
+    max-height: none;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .event-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .event-details {
+    margin-bottom: 12px;
+  }
+
+  .event-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .attendance-actions,
+  .admin-actions {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .events-header h1 {
+    font-size: 1.8rem;
+  }
+
+  .event-card {
+    padding: 16px;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .attendance-actions,
+  .admin-actions {
+    flex-direction: column;
+  }
+}
