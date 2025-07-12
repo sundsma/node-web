@@ -16,7 +16,6 @@ A full-stack web application for TGSU community with user authentication, event 
 
 ### Backend
 - Node.js & Express.js
-- MongoDB with Mongoose
 - LowDB used in development
 - JWT Authentication
 - bcrypt for password hashing
@@ -62,7 +61,6 @@ A full-stack web application for TGSU community with user authentication, event 
    PORT=5000
    NODE_ENV=development
    JWT_SECRET=your_jwt_secret_here
-   MONGODB_URI=mongodb://localhost:27017/node-web
    ```
 
 
