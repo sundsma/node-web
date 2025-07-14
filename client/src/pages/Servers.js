@@ -21,7 +21,42 @@ const Servers = () => {
   const [servers, setServers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedServer, setExpandedServer] = useState(null);
-  const { user, hasServerAccess } = useAuth();
+  const { user, hasServerAccess, isAdmin } = useAuth();
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [addForm, setAddForm] = useState({
+    name: '',
+    description: '',
+    address: '',
+    port: '',
+    gameType: '',
+    maxPlayers: 0
+  });
+  const handleAddFormChange = (e) => {
+    setAddForm({
+      ...addForm,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  const handleAddServer = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post('/api/servers', {
+        name: addForm.name,
+        description: addForm.description,
+        address: addForm.address,
+        port: Number(addForm.port),
+        gameType: addForm.gameType,
+        maxPlayers: Number(addForm.maxPlayers)
+      });
+      toast.success('Server added successfully');
+      setShowAddForm(false);
+      setAddForm({ name: '', description: '', address: '', port: '', gameType: '', maxPlayers: 0 });
+      fetchServers();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to add server');
+    }
+  };
 
   useEffect(() => {
     fetchServers();
@@ -63,7 +98,7 @@ const Servers = () => {
   const ServerCard = ({ server }) => {
     const hasAccess = hasServerAccess(server._id);
     const isExpanded = expandedServer === server._id;
-    const connectionString = `${server.address}:${server.port}`;
+    const connectionString = `${server.connectionInfo?.ip || ''}:${server.connectionInfo?.port || ''}`;
 
     return (
       <div className="server-card">
@@ -209,7 +244,37 @@ const Servers = () => {
               'Browse our available game servers. Sign in to access server management features.'
             }
           </p>
+          {isAdmin && (
+            <button className="btn btn-success" onClick={() => setShowAddForm(!showAddForm)}>
+              {showAddForm ? 'Cancel' : 'Add Server'}
+            </button>
+          )}
         </div>
+
+        {showAddForm && isAdmin && (
+          <form className="add-server-form" onSubmit={handleAddServer} style={{ marginBottom: 24 }}>
+            <h3>Add New Server</h3>
+            <div className="form-group">
+              <input type="text" name="name" value={addForm.name} onChange={handleAddFormChange} placeholder="Server Name" required />
+            </div>
+            <div className="form-group">
+              <input type="text" name="description" value={addForm.description} onChange={handleAddFormChange} placeholder="Description" />
+            </div>
+            <div className="form-group">
+              <input type="text" name="address" value={addForm.address} onChange={handleAddFormChange} placeholder="IP Address or Hostname" required />
+            </div>
+            <div className="form-group">
+              <input type="number" name="port" value={addForm.port} onChange={handleAddFormChange} placeholder="Port" required />
+            </div>
+            <div className="form-group">
+              <input type="text" name="gameType" value={addForm.gameType} onChange={handleAddFormChange} placeholder="Game Type" required />
+            </div>
+            <div className="form-group">
+              <input type="number" name="maxPlayers" value={addForm.maxPlayers} onChange={handleAddFormChange} placeholder="Max Players" required />
+            </div>
+            <button className="btn btn-primary" type="submit">Add Server</button>
+          </form>
+        )}
 
         {!servers || servers.length === 0 ? (
           <div className="empty-state">
