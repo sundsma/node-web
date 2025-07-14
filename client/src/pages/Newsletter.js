@@ -20,9 +20,10 @@ const Newsletter = () => {
 
   const fetchSubscribers = async () => {
     try {
-      const response = await axios.get('/api/newsletter/subscribers');
-      setSubscribers(response.data);
-      setSubscribersCount(response.data.length);
+      const response = await axios.get('/api/newsletter/subscriptions');
+      // The backend returns { subscriptions: [...] }
+      setSubscribers(response.data.subscriptions || []);
+      setSubscribersCount((response.data.subscriptions || []).length);
     } catch (error) {
       console.error('Failed to fetch subscribers:', error);
     }
@@ -228,7 +229,7 @@ const Newsletter = () => {
                       <div className="table-cell">{subscriber.username}</div>
                       <div className="table-cell">{subscriber.email}</div>
                       <div className="table-cell">
-                        {new Date(subscriber.createdAt).toLocaleDateString()}
+                        {subscriber.subscribedAt ? new Date(subscriber.subscribedAt).toLocaleDateString() : ''}
                       </div>
                       <div className="table-cell">
                         <button
