@@ -1,8 +1,9 @@
+
 const express = require('express');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
-const database = require('./db/database');
+const mongoose = require('mongoose');
 require('dotenv').config();
 
 const app = express();
@@ -21,25 +22,26 @@ app.use(limiter);
 app.use(cors());
 app.use(express.json());
 
-// Initialize database
-const initDB = async () => {
-  try {
-    await database.init();
-    console.log('Database initialized successfully');
-  } catch (error) {
-    console.error('Database initialization error:', error.message);
-    process.exit(1);
-  }
-};
 
-initDB();
+// Connect to MongoDB
+mongoose.connect(process.env.MONGODB_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+  .then(() => {
+    console.log('Connected to MongoDB');
+  })
+  .catch((err) => {
+    console.error('Failed to connect to MongoDB:', err.message);
+    process.exit(1);
+  });
 
 // Routes
 app.get('/api/health', (req, res) => {
-  res.json({ 
+  res.json({
     status: 'Server is running',
     timestamp: new Date().toISOString(),
-    database: 'Connected (LowDB)'
+    database: mongoose.connection.readyState === 1 ? 'Connected (MongoDB)' : 'Not connected'
   });
 });
 

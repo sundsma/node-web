@@ -1,5 +1,6 @@
 const express = require('express');
-const database = require('../db/database');
+const Server = require('../models/Server');
+const User = require('../models/User');
 const { auth, optionalAuth } = require('../middleware/auth');
 
 const router = express.Router();
@@ -7,33 +8,30 @@ const router = express.Router();
 // Get all servers
 router.get('/', optionalAuth, async (req, res) => {
   try {
-    const servers = await database.getAllServers();
-    
-    // Filter server data based on user permissions
+    const servers = await Server.find({});
+    // Map to client format
     const filteredServers = servers.map(server => {
       const hasAccess = req.user && (
-        req.user.role === 'admin' || 
-        server.adminUsers.includes(req.user.username) ||
-        req.user.serverAccess.includes(server.id)
+        req.user.role === 'admin' ||
+        (server.adminUsers || []).some(adminId => String(adminId) === String(req.user._id)) ||
+        (req.user.serverAccess || []).some(sid => String(sid) === String(server._id))
       );
-
       return {
-        id: server.id,
+        id: server._id,
         name: server.name,
-        game: server.game,
-        status: server.status,
-        players: server.players,
+        game: server.gameType,
+        status: server.isActive ? 'online' : 'offline',
+        players: server.currentPlayers,
         maxPlayers: server.maxPlayers,
         description: server.description,
         connectionInfo: {
-          ip: server.ip,
+          ip: server.address,
           port: server.port,
-          hasAdminAccess: hasAccess && (server.adminUsers.includes(req.user?.username) || req.user?.role === 'admin')
+          hasAdminAccess: hasAccess
         },
         createdAt: server.createdAt
       };
     });
-
     res.json({ servers: filteredServers });
   } catch (error) {
     console.error('Get servers error:', error);
@@ -44,33 +42,30 @@ router.get('/', optionalAuth, async (req, res) => {
 // Get server by ID
 router.get('/:id', optionalAuth, async (req, res) => {
   try {
-    const server = await database.getServerById(req.params.id);
+    const server = await Server.findById(req.params.id);
     if (!server) {
       return res.status(404).json({ message: 'Server not found' });
     }
-
     const hasAccess = req.user && (
-      req.user.role === 'admin' || 
-      server.adminUsers.includes(req.user.username) ||
-      req.user.serverAccess.includes(server.id)
+      req.user.role === 'admin' ||
+      (server.adminUsers || []).some(adminId => String(adminId) === String(req.user._id)) ||
+      (req.user.serverAccess || []).some(sid => String(sid) === String(server._id))
     );
-
     const filteredServer = {
-      id: server.id,
+      id: server._id,
       name: server.name,
-      game: server.game,
-      status: server.status,
-      players: server.players,
+      game: server.gameType,
+      status: server.isActive ? 'online' : 'offline',
+      players: server.currentPlayers,
       maxPlayers: server.maxPlayers,
       description: server.description,
       connectionInfo: {
-        ip: server.ip,
+        ip: server.address,
         port: server.port,
-        hasAdminAccess: hasAccess && (server.adminUsers.includes(req.user?.username) || req.user?.role === 'admin')
+        hasAdminAccess: hasAccess
       },
       createdAt: server.createdAt
     };
-
     res.json({ server: filteredServer });
   } catch (error) {
     console.error('Get server error:', error);
@@ -92,7 +87,11 @@ router.post('/', auth, async (req, res) => {
       players: 0
     };
 
-    const server = await database.createServer(serverData);
+    const server = new Server({
+      ...serverData,
+      adminUsers: [req.user._id]
+    });
+    await server.save();
     res.status(201).json({ message: 'Server created successfully', server });
   } catch (error) {
     console.error('Create server error:', error);
@@ -103,19 +102,17 @@ router.post('/', auth, async (req, res) => {
 // Update server
 router.put('/:id', auth, async (req, res) => {
   try {
-    const server = await database.getServerById(req.params.id);
+    const server = await Server.findById(req.params.id);
     if (!server) {
       return res.status(404).json({ message: 'Server not found' });
     }
-
-    // Check if user has admin access to this server
-    const hasAdminAccess = req.user.role === 'admin' || server.adminUsers.includes(req.user.username);
+    const hasAdminAccess = req.user.role === 'admin' || (server.adminUsers || []).some(adminId => String(adminId) === String(req.user._id));
     if (!hasAdminAccess) {
       return res.status(403).json({ message: 'Admin access required for this server' });
     }
-
-    const updatedServer = await database.updateServer(req.params.id, req.body);
-    res.json({ message: 'Server updated successfully', server: updatedServer });
+    Object.assign(server, req.body);
+    await server.save();
+    res.json({ message: 'Server updated successfully', server });
   } catch (error) {
     console.error('Update server error:', error);
     res.status(500).json({ message: 'Server error' });
@@ -129,11 +126,10 @@ router.delete('/:id', auth, async (req, res) => {
       return res.status(403).json({ message: 'Admin access required' });
     }
 
-    const deletedServer = await database.deleteServer(req.params.id);
+    const deletedServer = await Server.findByIdAndDelete(req.params.id);
     if (!deletedServer) {
       return res.status(404).json({ message: 'Server not found' });
     }
-
     res.json({ message: 'Server deleted successfully' });
   } catch (error) {
     console.error('Delete server error:', error);
@@ -144,40 +140,35 @@ router.delete('/:id', auth, async (req, res) => {
 // Server control actions (admin users only)
 router.post('/:id/control', auth, async (req, res) => {
   try {
-    const server = await database.getServerById(req.params.id);
+    const server = await Server.findById(req.params.id);
     if (!server) {
       return res.status(404).json({ message: 'Server not found' });
     }
-
-    // Check if user has admin access to this server
-    const hasAdminAccess = req.user.role === 'admin' || server.adminUsers.includes(req.user.username);
+    const hasAdminAccess = req.user.role === 'admin' || (server.adminUsers || []).some(adminId => String(adminId) === String(req.user._id));
     if (!hasAdminAccess) {
       return res.status(403).json({ message: 'Admin access required for this server' });
     }
-
     const { action } = req.body;
-    let newStatus = server.status;
-
+    let newStatus = server.isActive;
     switch (action) {
       case 'start':
-        newStatus = 'online';
+        newStatus = true;
         break;
       case 'stop':
-        newStatus = 'offline';
+        newStatus = false;
         break;
       case 'restart':
-        newStatus = 'restarting';
-        // In a real implementation, you would set it back to 'online' after restart
+        newStatus = false;
         setTimeout(async () => {
-          await database.updateServer(req.params.id, { status: 'online' });
+          await Server.findByIdAndUpdate(req.params.id, { isActive: true });
         }, 5000);
         break;
       default:
         return res.status(400).json({ message: 'Invalid action' });
     }
-
-    const updatedServer = await database.updateServer(req.params.id, { status: newStatus });
-    res.json({ message: `Server ${action} initiated`, server: updatedServer });
+    server.isActive = newStatus;
+    await server.save();
+    res.json({ message: `Server ${action} initiated`, server });
   } catch (error) {
     console.error('Server control error:', error);
     res.status(500).json({ message: 'Server error' });
