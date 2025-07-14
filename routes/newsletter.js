@@ -1,5 +1,5 @@
 const express = require('express');
-const database = require('../db/database');
+const Newsletter = require('../models/Newsletter');
 const { auth } = require('../middleware/auth');
 
 const router = express.Router();
@@ -13,7 +13,14 @@ router.post('/subscribe', async (req, res) => {
       return res.status(400).json({ message: 'Email is required' });
     }
 
-    const subscription = await database.subscribeToNewsletter(email);
+    let subscription = await Newsletter.findOne({ email });
+    if (!subscription) {
+      subscription = new Newsletter({ email });
+      await subscription.save();
+    } else if (!subscription.active) {
+      subscription.active = true;
+      await subscription.save();
+    }
     res.json({ message: 'Successfully subscribed to newsletter', subscription });
   } catch (error) {
     console.error('Newsletter subscription error:', error);
@@ -30,11 +37,12 @@ router.post('/unsubscribe', async (req, res) => {
       return res.status(400).json({ message: 'Email is required' });
     }
 
-    const subscription = await database.unsubscribeFromNewsletter(email);
+    const subscription = await Newsletter.findOne({ email });
     if (!subscription) {
       return res.status(404).json({ message: 'Subscription not found' });
     }
-
+    subscription.active = false;
+    await subscription.save();
     res.json({ message: 'Successfully unsubscribed from newsletter' });
   } catch (error) {
     console.error('Newsletter unsubscription error:', error);
@@ -49,7 +57,7 @@ router.get('/subscriptions', auth, async (req, res) => {
       return res.status(403).json({ message: 'Admin access required' });
     }
 
-    const subscriptions = await database.getAllNewsletterSubscriptions();
+    const subscriptions = await Newsletter.find({ active: true });
     res.json({ subscriptions });
   } catch (error) {
     console.error('Get subscriptions error:', error);

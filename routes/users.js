@@ -1,5 +1,5 @@
 const express = require('express');
-const database = require('../db/database');
+const User = require('../models/User');
 const { auth } = require('../middleware/auth');
 
 const router = express.Router();
@@ -11,11 +11,9 @@ router.get('/', auth, async (req, res) => {
       return res.status(403).json({ message: 'Admin access required' });
     }
 
-    // In a real implementation, you would get all users from database
-    res.json({ 
-      message: 'Users endpoint - admin only',
-      user: req.user
-    });
+    // Get all users from MongoDB (excluding passwords)
+    const users = await User.find({}, '-password');
+    res.json({ users });
   } catch (error) {
     console.error('Get users error:', error);
     res.status(500).json({ message: 'Server error' });
@@ -25,11 +23,10 @@ router.get('/', auth, async (req, res) => {
 // Get user profile
 router.get('/profile', auth, async (req, res) => {
   try {
-    const user = await database.findUserById(req.user.userId);
+    const user = await User.findById(req.user.userId).select('-password');
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
-
     res.json({ user });
   } catch (error) {
     console.error('Get profile error:', error);
@@ -46,11 +43,14 @@ router.put('/profile', auth, async (req, res) => {
     if (username) updates.username = username;
     if (email) updates.email = email;
 
-    const updatedUser = await database.updateUser(req.user.userId, updates);
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user.userId,
+      updates,
+      { new: true, runValidators: true, context: 'query' }
+    ).select('-password');
     if (!updatedUser) {
       return res.status(404).json({ message: 'User not found' });
     }
-
     res.json({
       message: 'Profile updated successfully',
       user: updatedUser

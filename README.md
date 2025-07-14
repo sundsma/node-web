@@ -31,9 +31,66 @@ A full-stack web application for TGSU community with user authentication, event 
 
 ## Setup Instructions
 
+
 ### Prerequisites
 - Node.js (v14 or higher)
 - npm or yarn
+- MongoDB (see below)
+
+### Installing MongoDB
+
+#### Windows
+1. **Download MongoDB Community Server**
+   - Go to: https://www.mongodb.com/try/download/community
+   - Select the latest version, Windows x64, MSI package.
+   - Click "Download".
+2. **Run the Installer**
+   - Double-click the downloaded `.msi` file.
+   - Follow the setup wizard:
+     - Choose "Complete" setup.
+     - *Optional:* Install MongoDB Compass (GUI).
+     - Make sure "Install MongoDB as a Service" is checked.
+3. **Finish Installation**
+   - Click "Finish" when the installer completes.
+4. **Add MongoDB to PATH (if not already)**
+   - Open Start Menu, search for "Environment Variables".
+   - Edit the `Path` variable in System variables.
+   - Add: `C:\Program Files\MongoDB\Server\<version>\bin`
+   - Replace `<version>` with your installed version (e.g., `7.0`).
+5. **Start MongoDB**
+   - MongoDB runs as a Windows service by default.
+   - To check status: open Command Prompt and run:
+     ```
+     net start MongoDB
+     ```
+   - To connect: open a new Command Prompt and run:
+     ```
+     mongosh
+     ```
+
+#### Linux (Ubuntu/Debian)
+1. **Import the public key**
+   ```bash
+   wget -qO - https://www.mongodb.org/static/pgp/server-7.0.asc | sudo apt-key add -
+   ```
+2. **Create the source list file**
+   ```bash
+   echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu $(lsb_release -cs)/mongodb-org/7.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
+   ```
+3. **Update and install**
+   ```bash
+   sudo apt-get update
+   sudo apt-get install -y mongodb-org
+   ```
+4. **Start MongoDB**
+   ```bash
+   sudo systemctl start mongod
+   sudo systemctl enable mongod
+   ```
+5. **Test connection**
+   ```bash
+   mongosh
+   ```
 
 ### Installation
 
@@ -135,14 +192,19 @@ A full-stack web application for TGSU community with user authentication, event 
 - `POST /api/newsletter/unsubscribe` - Unsubscribe from newsletter
 - `GET /api/newsletter/subscribers` - Get subscribers (admin only)
 
+
 ## Default Data
 
-The application starts with no default data. To get started:
+The application starts with no default data. To get started make an admin account:
 
 1. Register a new user account
-2. Create some events to populate the calendar
-3. Add servers (requires admin privileges)
-4. Subscribe to the newsletter
+2. Set your user as an admin:
+
+     ```sh
+     mongosh
+     use node-web
+     db.users.updateOne({ username: "yourusername" }, { $set: { role: "admin" } })
+     ```
 
 ## Development Notes
 
