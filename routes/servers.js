@@ -1,3 +1,4 @@
+
 const axios = require('axios');
 const express = require('express');
 const Server = require('../models/Server');
@@ -9,7 +10,8 @@ const router = express.Router();
 router.get('/pterodactyl', optionalAuth, async (req, res) => {
   try {
     // Replace with your Pterodactyl panel URL
-    const panelUrl = 'http://192.168.0.129'; // <-- CHANGE THIS TO YOUR PANEL URL
+    //const panelUrl = 'http://192.168.0.129'; // <-- CHANGE THIS TO YOUR PANEL URL
+    const panelUrl = 'http://10.0.0.2'; // <-- CHANGE THIS TO YOUR REMOTEPANEL URL
     const apiKey = process.env.API_KEY;
     //console.log('Used key:', apiKey);
     const response = await axios.get(`${panelUrl}/api/application/servers`, {
@@ -42,6 +44,27 @@ router.get('/pterodactyl', optionalAuth, async (req, res) => {
   } catch (error) {
     console.error('Pterodactyl API error:', error?.response?.data || error.message);
     res.status(500).json({ message: 'Failed to fetch Pterodactyl servers' });
+  }
+});
+
+// GET /api/servers/pterodactyl/:id/websocket - fetch websocket credentials for a Pterodactyl server
+router.get('/pterodactyl/:id/websocket', optionalAuth, async (req, res) => {
+  try {
+    //const panelUrl = 'http://192.168.0.129'; // <-- CHANGE THIS TO YOUR PANEL URL
+    const panelUrl = 'http://10.0.0.2'; // <-- CHANGE THIS TO YOUR REMOTEPANEL URL //PLACEHOLDER
+    const apiKey = process.env.API_KEY;
+    const serverId = req.params.id;
+    const response = await axios.get(`${panelUrl}/api/client/servers/${serverId}/websocket`, {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      }
+    });
+    res.json(response.data);
+  } catch (error) {
+    console.error('Pterodactyl websocket error:', error?.response?.data || error.message);
+    res.status(500).json({ message: 'Failed to fetch websocket credentials' });
   }
 });
 
