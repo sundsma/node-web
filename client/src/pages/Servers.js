@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'react-toastify';
 import { 
@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import './Servers.css';
+import { connectPterodactylWebsocket } from '../utils/pterodactylWebsocket';
 
 const Servers = () => {
   const [servers, setServers] = useState([]);
@@ -110,8 +111,143 @@ const Servers = () => {
     const isExpanded = expandedServer === serverId;
     const connectionString = `${server.connectionInfo?.ip || ''}:${server.connectionInfo?.port || ''}`;
 
+    // Real-time stats and console for Pterodactyl servers
+    const [pteroStats, setPteroStats] = useState(null);
+    const [consoleLogs, setConsoleLogs] = useState([]);
+    const [consoleInput, setConsoleInput] = useState('');
+    const wsRef = useRef(null);
+    const consoleOutputRef = useRef(null);
+    // Track popup window for live updates
+    const popupRef = useRef(null);
+
+    useEffect(() => {
+      if (server.tag === 'green' && isExpanded) {
+        axios.get(`/api/servers/pterodactyl/${serverId.replace('ptero-', '')}/websocket`).then(res => {
+          const { data } = res;
+          // replace the ip in the data socket to remote address //PLACEHOLDER
+          if (data && data.data && data.data.token && data.data.socket) {
+            wsRef.current = connectPterodactylWebsocket(data.data.socket.replace('192.168.0.129', '10.0.0.2'), data.data.token, (msg) => {
+              if (msg.event === 'stats' && msg.args && msg.args[0]) {
+                try {
+                  setPteroStats(JSON.parse(msg.args[0]));
+                } catch {}
+              }
+              if (msg.event === 'status' && msg.args) {
+                setPteroStats((prev) => ({ ...prev, state: msg.args[0] }));
+              }
+              if (msg.event === 'console output' && msg.args && msg.args[0]) {
+                setConsoleLogs((prev) => [...prev, msg.args[0]]);
+              }
+            });
+          }
+        });
+        return () => {
+          if (wsRef.current) wsRef.current.close();
+        };
+      }
+    }, [serverId, isExpanded, server.tag]);
+
+    // Auto-scroll console output to bottom when new logs arrive
+    useEffect(() => {
+      if (consoleOutputRef.current) {
+        consoleOutputRef.current.scrollTop = consoleOutputRef.current.scrollHeight;
+      }
+      // Send new logs to popup window if open
+      if (popupRef.current && !popupRef.current.closed) {
+        const lastLine = consoleLogs[consoleLogs.length - 1];
+        if (lastLine) {
+          popupRef.current.postMessage({ type: 'console-log', line: lastLine }, '*');
+        }
+      }
+    }, [consoleLogs]);
+
+    // Open console in new window
+    const openConsoleWindow = () => {
+      const win = window.open('', '_blank', 'width=600,height=400');
+      if (win) {
+        popupRef.current = win;
+        win.document.write(`
+          <html>
+          <head>
+            <title>${server.name} Console</title>
+            <link rel="icon" href="data:image/png;base64,iVBORw0KGgo=" />
+            <style>
+              body { background:#222; color:#eee; font-family:monospace; font-size:13px; padding:8px; margin:0; }
+              #console-output { position: absolute; top: 48px; left: 8px; right: 8px; bottom: 56px; overflow-y: auto; border-radius: 4px; background: #222; padding: 8px; border: 1px solid #444; margin-bottom: 0; word-break: break-all; }
+              #console-form { position: absolute; left: 8px; right: 8px; bottom: 8px; display: flex; gap: 8px; }
+              #console-input { flex: 1; padding: 6px; border-radius: 4px; border: 1px solid #444; background: #111; color: #eee; }
+              #console-form button { width: 80px; }
+              h2 { margin-top: 0; margin-bottom: 4px; }
+              .console-desc { margin-bottom: 8px; color: #aaa; font-size: 12px; }
+            </style>
+          </head>
+          <body>
+            <h2>${server.name} Console</h2>
+            <div id="console-output"></div>
+            <form id="console-form">
+              <input id="console-input" type="text" placeholder="Type command..." />
+              <button type="submit">Send</button>
+            </form>
+            <script>
+              const input = document.getElementById('console-input');
+              const form = document.getElementById('console-form');
+              const out = document.getElementById('console-output');
+              form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                window.opener.postMessage({ type: 'send-console-command', serverId: '${serverId}', command: input.value }, '*');
+                input.value = '';
+              });
+              window.addEventListener('message', function(e) {
+                if (e.data && e.data.type === 'console-log') {
+                  out.innerHTML += '<div>' + e.data.line + '</div>';
+                  out.scrollTop = out.scrollHeight;
+                }
+                if (e.data && e.data.type === 'console-init') {
+                  out.innerHTML = e.data.lines.map(line => '<div>' + line + '</div>').join('');
+                  out.scrollTop = out.scrollHeight;
+                }
+              });
+            <\/script>
+          </body></html>
+        `);
+        // Send initial logs
+        setTimeout(() => {
+          win.postMessage({ type: 'console-init', lines: consoleLogs }, '*');
+        }, 200);
+      }
+    };
+
+    // Listen for console command from popup
+    useEffect(() => {
+      const handler = (e) => {
+        if (e.data && e.data.type === 'send-console-command' && e.data.serverId === serverId) {
+          if (wsRef.current) {
+            wsRef.current.send(JSON.stringify({ event: 'send command', args: [e.data.command] }));
+          }
+        }
+      };
+      window.addEventListener('message', handler);
+      return () => window.removeEventListener('message', handler);
+    }, [serverId]);
+
+    // Send command to server console
+    const sendConsoleCommand = (e) => {
+      e.preventDefault();
+      if (wsRef.current && consoleInput.trim()) {
+        wsRef.current.send(JSON.stringify({ event: 'send command', args: [consoleInput] }));
+        setConsoleInput('');
+      }
+    };
+
+    // Send power action (start/stop)
+    const sendPowerAction = (action) => {
+      if (wsRef.current) {
+        wsRef.current.send(JSON.stringify({ event: 'set state', args: [action] }));
+      }
+    };
+
     return (
-      <div className={`server-card${server.tag === 'green' ? ' ptero-server' : ''}`}>
+      <div>
         <div className="server-header">
           <div className="server-info">
             <div className="server-icon">
@@ -122,10 +258,12 @@ const Servers = () => {
               <p className="server-description">{server.description}</p>
               <div className="server-meta">
                 <span className="server-game">{server.gameType || server.game}</span>
+                {/*
+                This is commented out to avoid showing player count for now //TO BE IMPLEMENTED
                 <span className="server-players">
                   <Users size={16} />
                   {(server.currentPlayers ?? server.players)}/{server.maxPlayers ?? server.maxPlayers ?? 0}
-                </span>
+                </span>*/}
               </div>
             </div>
           </div>
@@ -148,7 +286,7 @@ const Servers = () => {
             {hasAccess && (
               <button
                 className="btn btn-primary expand-btn"
-                onClick={() => toggleServerExpansion(server._id)}
+                onClick={() => toggleServerExpansion(serverId)}
               >
                 <Settings size={16} />
                 {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
@@ -162,22 +300,45 @@ const Servers = () => {
             <div className="control-section">
               <h4>Server Management</h4>
               <div className="control-buttons">
-                <button
-                  className="btn btn-success"
-                  onClick={() => updateServerStatus(server._id, true)}
-                  disabled={server.isActive}
-                >
-                  <Play size={16} />
-                  Start Server
-                </button>
-                <button
-                  className="btn btn-danger"
-                  onClick={() => updateServerStatus(server._id, false)}
-                  disabled={!server.isActive}
-                >
-                  <Pause size={16} />
-                  Stop Server
-                </button>
+                {server.tag === 'green' ? (
+                  <>
+                    <button
+                      className="btn btn-success"
+                      onClick={() => sendPowerAction('start')}
+                      disabled={pteroStats?.state === 'running'}
+                    >
+                      <Play size={16} />
+                      Start Server
+                    </button>
+                    <button
+                      className="btn btn-danger"
+                      onClick={() => sendPowerAction('stop')}
+                      disabled={pteroStats?.state !== 'running'}
+                    >
+                      <Pause size={16} />
+                      Stop Server
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      className="btn btn-success"
+                      onClick={() => updateServerStatus(serverId, true)}
+                      disabled={server.isActive}
+                    >
+                      <Play size={16} />
+                      Start Server
+                    </button>
+                    <button
+                      className="btn btn-danger"
+                      onClick={() => updateServerStatus(serverId, false)}
+                      disabled={!server.isActive}
+                    >
+                      <Pause size={16} />
+                      Stop Server
+                    </button>
+                  </>
+                )}
               </div>
             </div>
 
@@ -188,32 +349,61 @@ const Servers = () => {
                   <BarChart3 size={20} />
                   <div>
                     <span className="stat-label">CPU Usage</span>
-                    <span className="stat-value">45%</span>
+                    <span className="stat-value">
+                      {server.tag === 'green' && pteroStats ? `${(pteroStats.cpu_absolute ?? 0).toFixed(2)}%` : '45%'}
+                    </span>
                   </div>
                 </div>
                 <div className="stat-item">
                   <Users size={20} />
                   <div>
-                    <span className="stat-label">Active Players</span>
-                    <span className="stat-value">{server.currentPlayers}</span>
+                    <span className="stat-label">Memory Usage</span>
+                    <span className="stat-value">
+                      {server.tag === 'green' && pteroStats ? `${Math.round((pteroStats.memory_bytes ?? 0) / 1024 / 1024)} MB` : (server.currentPlayers ?? 0)}
+                    </span>
                   </div>
                 </div>
                 <div className="stat-item">
                   <Shield size={20} />
                   <div>
                     <span className="stat-label">Status</span>
-                    <span className={`stat-value ${server.isActive ? 'online' : 'offline'}`}>
-                      {server.isActive ? 'Online' : 'Offline'}
+                    <span className={`stat-value ${server.tag === 'green' && pteroStats ? pteroStats.state : (server.isActive ? 'online' : 'offline')}`}>
+                      {server.tag === 'green' && pteroStats ? pteroStats.state : (server.isActive ? 'Online' : 'Offline')}
                     </span>
                   </div>
                 </div>
               </div>
             </div>
 
+            {server.tag === 'green' && (
+              <div className="control-section">
+                <h4>Console</h4>
+                <div ref={consoleOutputRef} className="console-output" style={{ background: '#222', color: '#eee', padding: '8px', height: '180px', width: '100%', overflowY: 'auto', fontFamily: 'monospace', fontSize: '13px', borderRadius: '4px', marginBottom: '8px', wordBreak: 'break-all' }}>
+                  {consoleLogs.length === 0 ? (
+                    <div style={{ color: '#888' }}>No logs yet.</div>
+                  ) : (
+                    consoleLogs.map((line, idx) => <div key={idx}>{line}</div>)
+                  )}
+                </div>
+                <form onSubmit={sendConsoleCommand} style={{ display: 'flex', gap: '8px', width: '100%' }}>
+                  <input
+                    type="text"
+                    value={consoleInput}
+                    onChange={e => setConsoleInput(e.target.value)}
+                    placeholder="Type command..."
+                    style={{ flex: 1, padding: '6px', borderRadius: '4px', border: '1px solid #444', background: '#111', color: '#eee' }}
+                  />
+                  <button className="btn btn-outline" type="submit" disabled={!consoleInput.trim()} style={{ width: 80 }}>
+                    Send
+                  </button>
+                </form>
+              </div>
+            )}
+
             <div className="control-section">
               <h4>Quick Actions</h4>
               <div className="quick-actions">
-                <button className="btn btn-outline">
+                <button className="btn btn-outline" onClick={server.tag === 'green' ? openConsoleWindow : undefined}>
                   <ExternalLink size={16} />
                   Console
                 </button>
