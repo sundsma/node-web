@@ -22,6 +22,7 @@ const Servers = () => {
   const [loading, setLoading] = useState(true);
   const [expandedServer, setExpandedServer] = useState(null);
   const { user, hasServerAccess, isAdmin } = useAuth();
+  const UserIsAdmin = isAdmin();
   const [showAddForm, setShowAddForm] = useState(false);
   const [addForm, setAddForm] = useState({
     name: '',
@@ -256,14 +257,14 @@ const Servers = () => {
               'Browse our available game servers. Sign in to access server management features.'
             }
           </p>
-          {isAdmin && (
+          {UserIsAdmin && (
             <button className="btn btn-success" onClick={() => setShowAddForm(!showAddForm)}>
               {showAddForm ? 'Cancel' : 'Add Server'}
             </button>
           )}
         </div>
 
-        {showAddForm && isAdmin && (
+        {showAddForm && UserIsAdmin && (
           <form className="add-server-form" onSubmit={handleAddServer} style={{ marginBottom: 24 }}>
             <h3>Add New Server</h3>
             <div className="form-group">
@@ -307,10 +308,19 @@ const Servers = () => {
             <div className="auth-prompt-content">
               <h3>Want to manage servers?</h3>
               <p>Sign in to access server management features and control panels.</p>
-              <div className="auth-prompt-actions">
-                <a href="/login" className="btn btn-primary">Sign In</a>
-                <a href="/register" className="btn btn-outline">Create Account</a>
-              </div>
+              <p className="contact-us">
+                Contact Us for access to your very own server!
+              </p>
+              <button
+                className="btn btn-outline"
+                type="button"
+                onClick={() => {
+                  // This will open the user's email client with a pre-filled subject and body
+                  window.location.href = "mailto:team@example.com?subject=Server%20Access%20Request&body=Hi%20Team,%0A%0AI%20would%20like%20to%20request%20access%20to%20a%20server.%20Please%20contact%20me%20with%20more%20info.%0A%0AThanks!";
+                }}
+              >
+                Contact Team
+              </button>
             </div>
           </div>
         )}

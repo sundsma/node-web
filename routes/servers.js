@@ -11,7 +11,7 @@ router.get('/pterodactyl', optionalAuth, async (req, res) => {
     // Replace with your Pterodactyl panel URL
     const panelUrl = 'http://192.168.0.129'; // <-- CHANGE THIS TO YOUR PANEL URL
     const apiKey = process.env.API_KEY;
-    console.log('Used key:', apiKey);
+    //console.log('Used key:', apiKey);
     const response = await axios.get(`${panelUrl}/api/application/servers`, {
       headers: {
         'Authorization': `Bearer ${apiKey}`,
@@ -32,7 +32,7 @@ router.get('/pterodactyl', optionalAuth, async (req, res) => {
         connectionInfo: {
           ip: s.sftp_details?.ip || '',
           port: s.sftp_details?.port || '',
-          hasAdminAccess: req.user.role === 'admin'
+          hasAdminAccess: req.user && req.user.role === 'admin'
         },
         createdAt: s.created_at,
         tag: 'green'
@@ -52,7 +52,7 @@ router.get('/', optionalAuth, async (req, res) => {
     // Map to client format
     const filteredServers = servers.map(server => {
       const hasAccess = req.user && (
-        req.user.role === 'admin' ||
+        req.user?.role === 'admin' ||
         (server.adminUsers || []).some(adminId => String(adminId) === String(req.user._id)) ||
         (req.user.serverAccess || []).some(sid => String(sid) === String(server._id))
       );
