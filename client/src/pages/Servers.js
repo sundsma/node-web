@@ -64,8 +64,15 @@ const Servers = () => {
 
   const fetchServers = async () => {
     try {
-      const response = await axios.get('/api/servers');
-      setServers(response.data.servers || []);
+      // Fetch local servers
+      const [localRes, pteroRes] = await Promise.all([
+        axios.get('/api/servers'),
+        axios.get('/api/servers/pterodactyl')
+      ]);
+      // Merge servers, tag Pterodactyl servers as green
+      const localServers = localRes.data.servers || [];
+      const pteroServers = (pteroRes.data.servers || []).map(s => ({ ...s, tag: 'green' }));
+      setServers([...localServers, ...pteroServers]);
     } catch (error) {
       toast.error('Failed to fetch servers');
     } finally {
@@ -96,12 +103,14 @@ const Servers = () => {
   };
 
   const ServerCard = ({ server }) => {
-    const hasAccess = hasServerAccess(server._id);
-    const isExpanded = expandedServer === server._id;
+    // Support both _id and id for local and Pterodactyl servers
+    const serverId = server._id || server.id;
+    const hasAccess = hasServerAccess(serverId);
+    const isExpanded = expandedServer === serverId;
     const connectionString = `${server.connectionInfo?.ip || ''}:${server.connectionInfo?.port || ''}`;
 
     return (
-      <div className="server-card">
+      <div className={`server-card${server.tag === 'green' ? ' ptero-server' : ''}`}>
         <div className="server-header">
           <div className="server-info">
             <div className="server-icon">
@@ -111,16 +120,19 @@ const Servers = () => {
               <h3 className="server-name">{server.name}</h3>
               <p className="server-description">{server.description}</p>
               <div className="server-meta">
-                <span className="server-game">{server.gameType}</span>
+                <span className="server-game">{server.gameType || server.game}</span>
                 <span className="server-players">
                   <Users size={16} />
-                  {server.currentPlayers}/{server.maxPlayers}
+                  {(server.currentPlayers ?? server.players)}/{server.maxPlayers ?? server.maxPlayers ?? 0}
                 </span>
               </div>
             </div>
           </div>
           
-          <div className="server-actions">
+      <div className="server-actions">
+        {server.tag === 'green' && (
+          <span className="server-tag green">Pterodactyl</span>
+        )}
             <div className="connection-info">
               <span className="connection-address">{connectionString}</span>
               <button 
