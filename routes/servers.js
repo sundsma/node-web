@@ -1,9 +1,49 @@
+const axios = require('axios');
 const express = require('express');
 const Server = require('../models/Server');
 const User = require('../models/User');
 const { auth, optionalAuth } = require('../middleware/auth');
-
 const router = express.Router();
+
+// GET /api/servers/pterodactyl - fetch servers from Pterodactyl
+router.get('/pterodactyl', optionalAuth, async (req, res) => {
+  try {
+    // Replace with your Pterodactyl panel URL
+    const panelUrl = 'http://192.168.0.129'; // <-- CHANGE THIS TO YOUR PANEL URL
+    const apiKey = process.env.API_KEY;
+    console.log('Used key:', apiKey);
+    const response = await axios.get(`${panelUrl}/api/application/servers`, {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Accept': 'Application/vnd.pterodactyl.v1+json',
+        'Content-Type': 'application/json'
+      }
+    });
+    const servers = (response.data.data || []).map(item => {
+      const s = item.attributes;
+      return {
+        id: `ptero-${s.identifier}`,
+        name: s.name,
+        game: s.node || 'Pterodactyl',
+        status: 'online',
+        players: 0,
+        maxPlayers: 0,
+        description: s.description || 'Pterodactyl server',
+        connectionInfo: {
+          ip: s.sftp_details?.ip || '',
+          port: s.sftp_details?.port || '',
+          hasAdminAccess: req.user.role === 'admin'
+        },
+        createdAt: s.created_at,
+        tag: 'green'
+      };
+    });
+    res.json({ servers });
+  } catch (error) {
+    console.error('Pterodactyl API error:', error?.response?.data || error.message);
+    res.status(500).json({ message: 'Failed to fetch Pterodactyl servers' });
+  }
+});
 
 // Get all servers
 router.get('/', optionalAuth, async (req, res) => {
