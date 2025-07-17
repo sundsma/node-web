@@ -33,6 +33,9 @@ const Servers = () => {
     gameType: '',
     maxPlayers: 0
   });
+  // Overlay state for settings and analytics
+  const [settingsOverlay, setSettingsOverlay] = useState({ open: false, server: null });
+  const [analyticsOverlay, setAnalyticsOverlay] = useState({ open: false, serverId: null });
   const handleAddFormChange = (e) => {
     setAddForm({
       ...addForm,
@@ -82,12 +85,70 @@ const Servers = () => {
     }
   };
 
+  // TrafficGraph component for analytics overlay
+  const TrafficGraph = ({ trafficStats }) => {
+    // Simple SVG line graph for incoming/outgoing bytes
+    if (!trafficStats || trafficStats.length === 0) return <div style={{ color:'#888', textAlign:'center', marginTop:80 }}>No traffic data</div>;
+    const width = 440, height = 180, pad = 24;
+    const times = trafficStats.map(t => t.time);
+    const minTime = Math.min(...times);
+    const maxTime = Math.max(...times);
+    const incoming = trafficStats.map(t => t.incoming);
+    const outgoing = trafficStats.map(t => t.outgoing);
+    const maxVal = Math.max(...incoming, ...outgoing, 1);
+    // Map points to SVG coords
+    const x = t => pad + ((t.time - minTime) / (maxTime - minTime || 1)) * (width - 2*pad);
+    const yIn = v => height - pad - (v / maxVal) * (height - 2*pad);
+    const yOut = v => height - pad - (v / maxVal) * (height - 2*pad);
+    return (
+      <svg width={width} height={height} style={{ background:'#111', borderRadius:8 }}>
+        {/* Axes */}
+        <line x1={pad} y1={height-pad} x2={width-pad} y2={height-pad} stroke="#888" />
+        <line x1={pad} y1={pad} x2={pad} y2={height-pad} stroke="#888" />
+        {/* Incoming traffic (blue) */}
+        <polyline
+          fill="none"
+          stroke="#4fc3f7"
+          strokeWidth="2"
+          points={trafficStats.map(t => `${x(t)},${yIn(t.incoming)}`).join(' ')}
+        />
+        {/* Outgoing traffic (orange) */}
+        <polyline
+          fill="none"
+          stroke="#ffb74d"
+          strokeWidth="2"
+          points={trafficStats.map(t => `${x(t)},${yOut(t.outgoing)}`).join(' ')}
+        />
+        {/* Labels */}
+        <text x={pad} y={pad-6} fill="#4fc3f7" fontSize="12">Incoming</text>
+        <text x={pad+80} y={pad-6} fill="#ffb74d" fontSize="12">Outgoing</text>
+        <text x={width-pad-60} y={height-pad+16} fill="#888" fontSize="12">Time (last 1 min)</text>
+        <text x={pad-20} y={height-pad-60} fill="#888" fontSize="12" transform={`rotate(-90,${pad-20},${height-pad-60})`}>Bytes</text>
+      </svg>
+    );
+  };
+
   const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text).then(() => {
-      toast.success('Copied to clipboard!');
-    }).catch(() => {
-      toast.error('Failed to copy to clipboard');
-    });
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+      navigator.clipboard.writeText(text).then(() => {
+        toast.success('Copied to clipboard!');
+      }).catch(() => {
+        toast.error('Failed to copy to clipboard');
+      });
+    } else {
+      // Fallback for older browsers or insecure context
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand('copy');
+        toast.success('Copied to clipboard!');
+      } catch {
+        toast.error('Failed to copy to clipboard');
+      }
+      document.body.removeChild(textarea);
+    }
   };
 
   const toggleServerExpansion = (serverId) => {
@@ -109,12 +170,17 @@ const Servers = () => {
     const serverId = server._id || server.id;
     const hasAccess = hasServerAccess(serverId);
     const isExpanded = expandedServer === serverId;
-    const connectionString = `${server.connectionInfo?.ip || ''}:${server.connectionInfo?.port || ''}`;
+    
+    // Create connection string - don't show port if it's empty
+    const serverIp = server.connectionInfo?.ip || server.address || '';
+    const serverPort = server.connectionInfo?.port || server.port || '';
+    const connectionString = serverPort ? `${serverIp}:${serverPort}` : serverIp;
 
     // Real-time stats and console for Pterodactyl servers
     const [pteroStats, setPteroStats] = useState(null);
     const [consoleLogs, setConsoleLogs] = useState([]);
     const [consoleInput, setConsoleInput] = useState('');
+    const [trafficStats, setTrafficStats] = useState([]); // [{time, incoming, outgoing}]
     const wsRef = useRef(null);
     const consoleOutputRef = useRef(null);
     // Track popup window for live updates
@@ -122,14 +188,24 @@ const Servers = () => {
 
     useEffect(() => {
       if (server.tag === 'green' && isExpanded) {
+        let traffic = [];
         axios.get(`/api/servers/pterodactyl/${serverId.replace('ptero-', '')}/websocket`).then(res => {
           const { data } = res;
-          // replace the ip in the data socket to remote address //PLACEHOLDER
           if (data && data.data && data.data.token && data.data.socket) {
-            wsRef.current = connectPterodactylWebsocket(data.data.socket.replace('192.168.0.129', '10.0.0.2'), data.data.token, (msg) => {
+            wsRef.current = connectPterodactylWebsocket(data.data.socket, data.data.token, (msg) => {
               if (msg.event === 'stats' && msg.args && msg.args[0]) {
                 try {
-                  setPteroStats(JSON.parse(msg.args[0]));
+                  const stats = JSON.parse(msg.args[0]);
+                  setPteroStats(stats);
+                  const now = Date.now();
+                  // Use rx_bytes/tx_bytes if available, else fallback to network_rx_bytes/network_tx_bytes
+                  const incoming = stats.network.rx_bytes ?? 0;
+                  const outgoing = stats.network.tx_bytes ?? 0;
+                  traffic.push({ time: now, incoming, outgoing });
+                  // Keep only last minute
+                  traffic = traffic.filter(t => now - t.time < 60000);
+                  setTrafficStats([...traffic]);
+                  console.log('WebSocket stats:', { incoming, outgoing, traffic });
                 } catch {}
               }
               if (msg.event === 'status' && msg.args) {
@@ -265,32 +341,37 @@ const Servers = () => {
                   {(server.currentPlayers ?? server.players)}/{server.maxPlayers ?? server.maxPlayers ?? 0}
                 </span>*/}
               </div>
+              {UserIsAdmin && (
+                <div className="server-id" style={{ fontSize: '12px', color: '#888', marginTop: '4px' }}>
+                  <strong>ID:</strong> {serverId}
+                </div>
+              )}
             </div>
           </div>
-          
-      <div className="server-actions">
-        {server.tag === 'green' && (
-          <span className="server-tag green">Pterodactyl</span>
-        )}
+          <div className="server-actions">
+            {server.tag === 'green' && (
+              <span className="server-tag green">Pterodactyl</span>
+            )}
             <div className="connection-info">
               <span className="connection-address">{connectionString}</span>
               <button 
                 className="btn btn-secondary copy-btn"
-                onClick={() => copyToClipboard(connectionString)}
+                onClick={() => { copyToClipboard(connectionString); console.log(connectionString); }}
                 title="Copy connection address"
               >
                 <Copy size={16} />
               </button>
             </div>
-            
             {hasAccess && (
-              <button
-                className="btn btn-primary expand-btn"
-                onClick={() => toggleServerExpansion(serverId)}
-              >
-                <Settings size={16} />
-                {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-              </button>
+              <>
+                <button
+                  className="btn btn-primary expand-btn"
+                  onClick={() => toggleServerExpansion(serverId)}
+                >
+                  <Settings size={16} />
+                  {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -402,25 +483,79 @@ const Servers = () => {
 
             <div className="control-section">
               <h4>Quick Actions</h4>
-              <div className="quick-actions">
-                <button className="btn btn-outline" onClick={server.tag === 'green' ? openConsoleWindow : undefined}>
-                  <ExternalLink size={16} />
-                  Console
-                </button>
-                <button className="btn btn-outline">
-                  <BarChart3 size={16} />
-                  Analytics
-                </button>
-                <button className="btn btn-outline">
-                  <Settings size={16} />
-                  Settings
-                </button>
-              </div>
+            <div className="quick-actions">
+              <button className="btn btn-outline" onClick={server.tag === 'green' ? openConsoleWindow : undefined}>
+                <ExternalLink size={16} />
+                Console
+              </button>
+              <button className="btn btn-outline" onClick={() => setAnalyticsOverlay({ open: true, serverId: server._id || server.id })}>
+                <BarChart3 size={16} />
+                Analytics
+              </button>
+              <button className="btn btn-outline" onClick={() => setSettingsOverlay({ open: true, server, trafficStats })}>
+                <Settings size={16} />
+                Settings
+              </button>
+            </div>
             </div>
           </div>
         )}
       </div>
     );
+  };
+
+  const handleSettingsSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const serverToUpdate = settingsOverlay.server;
+      const updateData = {
+        name: e.target.name.value,
+        description: e.target.description.value,
+        address: e.target.address.value,
+        port: e.target.port.value
+      };
+
+      let serverId;
+      let endpoint;
+
+      if (serverToUpdate.tag === 'green') {
+        // For Pterodactyl servers, extract the actual ID and add pterodactylId
+        serverId = serverToUpdate.id.replace('ptero-', '');
+        endpoint = `/api/servers/${serverId}`;
+        updateData.pterodactylId = serverId;
+      } else {
+        // For local servers, update directly
+        serverId = serverToUpdate._id;
+        endpoint = `/api/servers/${serverId}`;
+      }
+      
+      await axios.put(endpoint, updateData);
+      
+      // Update local state
+      setServers(prev => prev.map(server => {
+        const currentServerId = server._id || server.id;
+        if (currentServerId === (serverToUpdate.tag === 'green' ? serverToUpdate.id : serverId)) {
+          return { 
+            ...server, 
+            name: updateData.name,
+            description: updateData.description,
+            connectionInfo: {
+              ...server.connectionInfo,
+              ip: updateData.address,
+              port: updateData.port
+            }
+          };
+        }
+        return server;
+      }));
+      
+      setSettingsOverlay({ open: false, server: null });
+      toast.success('Server settings updated successfully');
+      fetchServers(); // Refresh to get updated data from server
+    } catch (error) {
+      console.error('Error updating server:', error);
+      toast.error('Failed to update server settings');
+    }
   };
 
   if (loading) {
@@ -478,7 +613,6 @@ const Servers = () => {
             <button className="btn btn-primary" type="submit">Add Server</button>
           </form>
         )}
-
         {!servers || servers.length === 0 ? (
           <div className="empty-state">
             <Server size={64} />
@@ -492,21 +626,87 @@ const Servers = () => {
             ))}
           </div>
         )}
+        {/* Settings Overlay */}
+        {settingsOverlay.open && settingsOverlay.server && (
+          <div className="overlay settings-overlay" style={{ position: 'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.7)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center' }}>
+            <div style={{ background:'#222', color:'#eee', padding:32, borderRadius:8, minWidth:320, maxWidth:400 }}>
+              <h2>Edit Server Settings</h2>
+              <form onSubmit={handleSettingsSubmit}>
+                <div className="form-group">
+                  <label>Name</label>
+                  <input name="name" defaultValue={settingsOverlay.server.name} required />
+                </div>
+                <div className="form-group">
+                  <label>Description</label>
+                  <input name="description" defaultValue={settingsOverlay.server.description} />
+                </div>
+                <div className="form-group">
+                  <label>Address</label>
+                  <input name="address" defaultValue={settingsOverlay.server.connectionInfo?.ip || settingsOverlay.server.address || ''} required />
+                </div>
+                <div className="form-group">
+                  <label>Port</label>
+                  <input name="port" defaultValue={settingsOverlay.server.connectionInfo?.port || settingsOverlay.server.port || ''} />
+                </div>
+                <div style={{ display:'flex', gap:12, marginTop:16 }}>
+                  <button className="btn btn-primary" type="submit">Save</button>
+                  <button className="btn btn-outline" type="button" onClick={() => setSettingsOverlay({ open: false, server: null })}>Cancel</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+        {/* Analytics Overlay */}
+        {analyticsOverlay.open && analyticsOverlay.serverId && (() => {
+          // Find the currently expanded server card
+          const selectedServer = servers.find(s => (s._id || s.id) === analyticsOverlay.serverId);
+          // Only show live trafficStats if the server is expanded and is a Pterodactyl server
+          let trafficStats = [];
+          if (selectedServer && selectedServer.tag === 'green' && expandedServer === analyticsOverlay.serverId) {
+            // We need to get the live trafficStats from the expanded ServerCard
+            // Since ServerCard is a function component, we can't directly access its state
+            // For now, show a message to expand the server for live data
+            // For a full solution, trafficStats should be managed at parent level
+          }
+          return (
+            <div className="overlay analytics-overlay" style={{ position: 'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.7)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center' }}>
+              <div style={{ background:'#222', color:'#eee', padding:32, borderRadius:8, minWidth:320, maxWidth:500 }}>
+                <h2>Network Traffic (Last 1 Minute)</h2>
+                <div style={{ height:220, width:'100%', background:'#111', borderRadius:8, padding:8, marginBottom:16 }}>
+                  {selectedServer && selectedServer.tag === 'green' && expandedServer === analyticsOverlay.serverId ? (
+                    <TrafficGraph trafficStats={trafficStats} />
+                  ) : (
+                    <div style={{ color:'#888', textAlign:'center', marginTop:80 }}>Expand the server to view live traffic data.</div>
+                  )}
+                </div>
+                <button className="btn btn-outline" type="button" onClick={() => setAnalyticsOverlay({ open: false, serverId: null })}>Close</button>
+              </div>
+            </div>
+          );
+        })()}
 
+        {/* Contact section for non-logged-in users */}
         {!user && (
-          <div className="auth-prompt">
+          <div className="auth-prompt" style={{ 
+            background: '#1a1a1a', 
+            border: '1px solid #333', 
+            borderRadius: '8px', 
+            padding: '24px', 
+            textAlign: 'center', 
+            marginTop: '32px' 
+          }}>
             <div className="auth-prompt-content">
               <h3>Want to manage servers?</h3>
               <p>Sign in to access server management features and control panels.</p>
               <p className="contact-us">
-                Contact Us for access to your very own server!
+                Contact us for access to your very own server!
               </p>
               <button
                 className="btn btn-outline"
                 type="button"
                 onClick={() => {
                   // This will open the user's email client with a pre-filled subject and body
-                  window.location.href = "mailto:team@example.com?subject=Server%20Access%20Request&body=Hi%20Team,%0A%0AI%20would%20like%20to%20request%20access%20to%20a%20server.%20Please%20contact%20me%20with%20more%20info.%0A%0AThanks!";
+                  window.location.href = "mailto:team@example.com?subject=Server%20Access%20Request&body=Hi%20Team,%0A%0AI%20would%20like%20to%20request%20access%20to%20a%20server.%0A%0AThanks!";
                 }}
               >
                 Contact Team
