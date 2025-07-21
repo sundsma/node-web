@@ -133,21 +133,23 @@ const Home = () => {
       </section>
 
       {/* Benefits Section */}
-      <section className="benefits">
+      {/* Benefits Section with background image */}
+      <section className="benefits-section-with-bg">
+        <div className="benefits-bg-image"></div>
         <div className="container">
           <h2 className="section-title">Why Choose TGSU?</h2>
           <div className="benefits-grid">
-            <div className="benefit-item">
+            <div className="benefit-card white-card">
               <Shield size={24} />
               <h4>Secure & Reliable</h4>
               <p>Your data is protected with enterprise-grade security measures.</p>
             </div>
-            <div className="benefit-item">
+            <div className="benefit-card black-card">
               <Globe size={24} />
               <h4>Global Community</h4>
-              <p>Connect with local friend groups and chat internationlly!</p>
+              <p>Connect with local friend groups and chat internationally!</p>
             </div>
-            <div className="benefit-item">
+            <div className="benefit-card white-card">
               <Users size={24} />
               <h4>Active Moderation</h4>
               <p>Our so-so-dedicated team ensures a safe and friendly environment for all.</p>

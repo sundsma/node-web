@@ -12,12 +12,18 @@ const serverSchema = new mongoose.Schema({
   },
   address: {
     type: String,
-    required: true,
+    required: function() {
+      // Only require address if this is not a Pterodactyl override
+      return !this.pterodactylId;
+    },
     trim: true
   },
   port: {
     type: Number,
-    required: true
+    required: function() {
+      // Only require port if this is not a Pterodactyl override
+      return !this.pterodactylId;
+    }
   },
   gameType: {
     type: String,
@@ -40,6 +46,11 @@ const serverSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
   }],
+  pterodactylId: {
+    type: String,
+    trim: true,
+    index: true  // Add index for faster lookups
+  },
   settings: {
     type: mongoose.Schema.Types.Mixed,
     default: {}
