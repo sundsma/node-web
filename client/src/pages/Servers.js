@@ -192,7 +192,8 @@ const Servers = () => {
         axios.get(`/api/servers/pterodactyl/${serverId.replace('ptero-', '')}/websocket`).then(res => {
           const { data } = res;
           if (data && data.data && data.data.token && data.data.socket) {
-            wsRef.current = connectPterodactylWebsocket(data.data.socket, data.data.token, (msg) => {
+            wsRef.current = connectPterodactylWebsocket(data.data.socket.replace('192.168.0.129', '10.0.0.2'), data.data.token, (msg) => {   //FOR REMOTE
+            //wsRef.current = connectPterodactylWebsocket(data.data.socket, data.data.token, (msg) => { //PLACEHOLDER for local connection
               if (msg.event === 'stats' && msg.args && msg.args[0]) {
                 try {
                   const stats = JSON.parse(msg.args[0]);
