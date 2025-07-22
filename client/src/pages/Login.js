@@ -123,7 +123,6 @@ const Login = () => {
 
           <CustomCaptcha 
             onVerify={handleCaptchaVerify}
-            challenge="scp"
           />
 
           <button 

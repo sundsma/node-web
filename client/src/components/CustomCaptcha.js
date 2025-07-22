@@ -14,39 +14,29 @@ const CustomCaptcha = ({ onVerify, challenge = "scp" }) => {
   // Format: {4-digit-hex}_{challenge}_{description}.jpg
   // Hex converts to 16-bit binary representing 4x4 grid where 1 = contains target object, 0 = doesn't contain
   const availableImages = useMemo(() => [
-    // Cars challenge - hex prefix converts to binary indicating which cells contain cars
+
+    // hex prefix converts to binary indicating which cells contain cars
     '0660_scp_collateral_damage.jpg',       // CC00 = 1100110000000000 - Cars in top-left area
-    '0CC0_scp_dog_pounce.jpg'         // 0CC0 = 0000110011000000 - Cars in middle area  
-    //'000F_cars_highway_view.jpg',        // 000F = 0000000000001111 - Cars in bottom row
-    //'8421_cars_intersection.jpg',        // 8421 = 1000010000100001 - Cars scattered
-    //'6666_cars_dealership.jpg',          // 6666 = 0110011001100110 - Cars in pattern
+    '0CC0_scp_dog_pounce.jpg',         // 0CC0 = 0000110011000000 - Cars in middle area  
+    '3333_imposter_dank_spoder_right.jpg',        // 000F = 0000000000001111 - Cars in bottom row
+    'CCC0_imposter_dank_spoder_left.jpg',        // 8421 = 1000010000100001 - Cars scattered
+    'FFC0_duck_hunt_sky.gif',          // 6666 = 0110011001100110 - Cars in pattern
     
-    // Traffic lights challenge
-    //'8000_lights_intersection_1.jpg',    // 8000 = 1000000000000000 - Light in top-left
-    //'1000_lights_intersection_2.jpg',    // 1000 = 0001000000000000 - Light in top-right area
-    //'0080_lights_street_1.jpg',          // 0080 = 0000000010000000 - Light in middle
+    'FF99_vietco_ambush_path.jpg',    // 8000 = 1000000000000000 - Light in top-left
+    '0CC0_useless_bmw_indicator.jpg',    // 1000 = 0001000000000000 - Light in top-right area
+    '6663_dat-boi_frog_unicycle.jpg',          // 0080 = 0000000010000000 - Light in middle
     //'0001_lights_crosswalk.jpg',         // 0001 = 0000000000000001 - Light in bottom-right
-    
-    // Stop signs challenge  
-    //'4000_signs_residential_street.jpg', // 4000 = 0100000000000000 - Sign in top area
+      
+    '0000_massacre_gonna_get_canceled.jpg' // 4000 = 0100000000000000 - Sign in top area
     //'0008_signs_school_zone.jpg',        // 0008 = 0000000000001000 - Sign in bottom area
     //'0800_signs_corner_view.jpg',        // 0800 = 0000100000000000 - Sign in middle-left
   ], []);
 
   // Generate random challenge with a single image
   const generateChallenge = useCallback(() => {
-    // Filter images that match the current challenge
-    const challengeImages = availableImages.filter(img => 
-      img.includes(`_${challenge}_`)
-    );
-    
-    if (challengeImages.length === 0) {
-      console.warn(`No images found for challenge: ${challenge}`);
-      return;
-    }
     
     // Select random image from matching challenge
-    const randomImage = challengeImages[Math.floor(Math.random() * challengeImages.length)];
+    const randomImage = availableImages[Math.floor(Math.random() * availableImages.length)];
     
     // Extract hex prefix and convert to binary, then to array of correct positions
     const hexPrefix = randomImage.split('_')[0];
@@ -69,7 +59,7 @@ const CustomCaptcha = ({ onVerify, challenge = "scp" }) => {
     setShowResult(false);
     setImageLoaded(false);
     setImageKey(prev => prev + 1); // Increment key to force image reload
-  }, [challenge, availableImages]);
+  }, [availableImages]);
 
   useEffect(() => {
     generateChallenge();
@@ -200,7 +190,7 @@ const CustomCaptcha = ({ onVerify, challenge = "scp" }) => {
           type="button"
           className="btn btn-outline captcha-verify"
           onClick={handleVerify}
-          disabled={selectedCells.length === 0 || showResult || !imageLoaded}
+          disabled={showResult || !imageLoaded}
         >
           Verify
         </button>
