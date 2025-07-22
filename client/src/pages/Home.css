@@ -57,6 +57,42 @@
 .features {
   padding: 80px 0;
   background-color: var(--bg-color);
+  position: relative;
+  overflow: hidden;
+}
+
+.features::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 100%;
+  background-image: url('../../public/cards-bg.gif');
+  background-size: cover;
+  background-position: right center;
+  background-repeat: no-repeat;
+  z-index: 1;
+}
+
+.features::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 50%;
+  height: 100%;
+  background-image: url('../../public/cards-bg.gif');
+  background-size: cover;
+  background-position: left center;
+  background-repeat: no-repeat;
+  transform: scaleX(-1);
+  z-index: 1;
+}
+
+.features .container {
+  position: relative;
+  z-index: 2;
 }
 
 .section-title {

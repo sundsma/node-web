@@ -177,7 +177,6 @@ const Register = () => {
 
           <CustomCaptcha 
             onVerify={handleCaptchaVerify}
-            challenge="scp"
           />
 
           <button 

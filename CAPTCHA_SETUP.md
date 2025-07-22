@@ -21,6 +21,7 @@ public/
     ├── 4000_signs_residential_street.jpg
     ├── 0008_signs_school_zone.jpg
     └── 0800_signs_corner_view.jpg
+    └── 0800_dat-boi_frog_unicycly.gif
 ```
 
 ## Naming Convention
@@ -30,7 +31,7 @@ The filename structure is: `{4-digit-hex}_{challenge}_{description}.{extension}`
 - **4-digit-hex**: A hexadecimal string (0000-FFFF) representing the 4x4 grid
 - **challenge**: The challenge category (e.g., "cars", "lights", "signs")
 - **description**: A descriptive name for the specific scene
-- **extension**: Image file extension (.jpg, .png, .webp)
+- **extension**: Image file extension (.jpg, .png, .webp, .gif)
 
 ## Hex to Binary Grid Mapping
 
