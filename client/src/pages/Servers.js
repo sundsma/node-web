@@ -351,7 +351,7 @@ const Servers = () => {
           </div>
           <div className="server-actions">
             {server.tag === 'green' && (
-              <span className="server-tag green">Pterodactyl</span>
+              <span className="server-tag green"></span>
             )}
             <div className="connection-info">
               <span className="connection-address">{connectionString}</span>

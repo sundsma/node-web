@@ -361,6 +361,15 @@ const Events = () => {
                       {event.attendees?.length || 0}
                       {event.maxAttendees > 0 && ` / ${event.maxAttendees}`} attendees
                     </span>
+                    {canEditEvent(event) && (
+                      <span className="attendees-list">
+                        {event.attendees?.map(attendee => (
+                          <span key={attendee._id} className="attendee">
+                            {attendee.username}
+                          </span>
+                        ))}
+                      </span>
+                    )}
                   </div>
                 </div>
 
