@@ -284,7 +284,7 @@ const Servers = () => {
                   out.scrollTop = out.scrollHeight;
                 }
               });
-            <\/script>
+            </script>
           </body></html>
         `);
         // Send initial logs
@@ -688,14 +688,7 @@ const Servers = () => {
 
         {/* Contact section for non-logged-in users */}
         {!user && (
-          <div className="auth-prompt" style={{ 
-            background: '#1a1a1a', 
-            border: '1px solid #333', 
-            borderRadius: '8px', 
-            padding: '24px', 
-            textAlign: 'center', 
-            marginTop: '32px' 
-          }}>
+          <div className="auth-prompt">
             <div className="auth-prompt-content">
               <h3>Want to manage servers?</h3>
               <p>Sign in to access server management features and control panels.</p>

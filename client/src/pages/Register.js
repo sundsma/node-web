@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'react-toastify';
+import CustomCaptcha from '../components/CustomCaptcha';
 import './Auth.css';
 
 const Register = () => {
@@ -13,6 +14,7 @@ const Register = () => {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [captchaVerified, setCaptchaVerified] = useState(false);
   const [loading, setLoading] = useState(false);
   const { register, isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -34,6 +36,12 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+
+    if (!captchaVerified) {
+      toast.error('Please complete the security verification');
+      return;
+    }
+        
 
     if (formData.password !== formData.confirmPassword) {
       toast.error('Passwords do not match');
@@ -58,8 +66,17 @@ const Register = () => {
       }
     } catch (error) {
       toast.error('An error occurred during registration');
+      // Reset captcha on failed submission
+      setCaptchaVerified(false);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCaptchaVerify = (isVerified) => {
+    setCaptchaVerified(isVerified);
+    if (isVerified) {
+      toast.success('Security verification complete!');
     }
   };
 
@@ -158,13 +175,20 @@ const Register = () => {
             </div>
           </div>
 
+          <CustomCaptcha 
+            onVerify={handleCaptchaVerify}
+            challenge="scp"
+          />
+
           <button 
             type="submit" 
             className="btn btn-primary auth-submit"
-            disabled={loading}
+            disabled={loading || !captchaVerified}
           >
             {loading ? (
               <span className="loading">Creating account...</span>
+            ) : !captchaVerified ? (
+              'Complete Security Check'
             ) : (
               'Create Account'
             )}
