@@ -1,11 +1,63 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Calendar, Users, Server, Mail, ArrowRight, Shield, Globe } from 'lucide-react';
+import { Calendar, Users, Server, Mail, ArrowRight, Shield, Globe, MessageCircle, Star, X, Send } from 'lucide-react';
 import './Home.css';
 
 const Home = () => {
   const { isAuthenticated, user } = useAuth();
+  const [chatOpen, setChatOpen] = useState(false);
+  const [messages, setMessages] = useState([]);
+  const [inputMessage, setInputMessage] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+
+  // Add initial bot message when chat is opened
+  useEffect(() => {
+    if (chatOpen && messages.length === 0) {
+      setTimeout(() => {
+        setMessages([{
+          id: 1,
+          text: "I'm the new TGSU agent! Ask me anything!",
+          sender: 'bot',
+          timestamp: new Date()
+        }]);
+      }, 500);
+    }
+  }, [chatOpen, messages.length]);
+
+  const handleSendMessage = () => {
+    if (!inputMessage.trim()) return;
+
+    const userMessage = {
+      id: Date.now(),
+      text: inputMessage,
+      sender: 'user',
+      timestamp: new Date()
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setInputMessage('');
+    setIsTyping(true);
+
+    // Simulate bot response after a few seconds
+    setTimeout(() => {
+      setIsTyping(false);
+      const botMessage = {
+        id: Date.now() + 1,
+        text: "idk ¯\\_(ツ)_/¯",
+        sender: 'bot',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, botMessage]);
+    }, 2000);
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
 
   return (
     <div className="home">
@@ -179,6 +231,75 @@ const Home = () => {
             </div>
           </div>
         </section>
+      )}
+
+      {/* Chat Icon */}
+      <div className="chat-icon-container">
+        <div className={`chat-icon ${chatOpen ? 'hidden' : ''}`} onClick={() => setChatOpen(true)}>
+          <div className="chat-tooltip">Ask AI</div>
+          <MessageCircle size={24} />
+          <div className="chat-star">
+            <Star size={12} />
+          </div>
+        </div>
+      </div>
+
+      {/* Chat Box */}
+      {chatOpen && (
+        <div className="chat-box">
+          <div className="chat-header">
+            <div className="chat-title">
+              <MessageCircle size={16} />
+              TGSU AI Assistant
+            </div>
+            <button className="chat-close" onClick={() => setChatOpen(false)}>
+              <X size={16} />
+            </button>
+          </div>
+          
+          <div className="chat-messages">
+            {messages.map(message => (
+              <div key={message.id} className={`message ${message.sender}`}>
+                <div className="message-content">
+                  {message.text}
+                </div>
+                <div className="message-time">
+                  {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </div>
+              </div>
+            ))}
+            
+            {isTyping && (
+              <div className="message bot typing">
+                <div className="message-content">
+                  <div className="typing-indicator">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+          
+          <div className="chat-input">
+            <input
+              type="text"
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Type your message..."
+              className="chat-input-field"
+            />
+            <button 
+              className="chat-send-btn"
+              onClick={handleSendMessage}
+              disabled={!inputMessage.trim()}
+            >
+              <Send size={16} />
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
