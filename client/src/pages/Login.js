@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'react-toastify';
+import CustomCaptcha from '../components/CustomCaptcha';
 import './Auth.css';
 
 const Login = () => {
@@ -11,6 +12,7 @@ const Login = () => {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [captchaVerified, setCaptchaVerified] = useState(false);
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
@@ -30,6 +32,12 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!captchaVerified) {
+      toast.error('Please complete the security verification');
+      return;
+    }
+    
     setLoading(true);
 
     try {
@@ -40,11 +48,22 @@ const Login = () => {
         navigate('/');
       } else {
         toast.error(result.message);
+        // Reset captcha on failed login
+        setCaptchaVerified(false);
       }
     } catch (error) {
       toast.error('An error occurred during login');
+      // Reset captcha on error
+      setCaptchaVerified(false);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCaptchaVerify = (isVerified) => {
+    setCaptchaVerified(isVerified);
+    if (isVerified) {
+      toast.success('Security verification complete!');
     }
   };
 
@@ -102,13 +121,20 @@ const Login = () => {
             </div>
           </div>
 
+          <CustomCaptcha 
+            onVerify={handleCaptchaVerify}
+            challenge="scp"
+          />
+
           <button 
             type="submit" 
             className="btn btn-primary auth-submit"
-            disabled={loading}
+            disabled={loading || !captchaVerified}
           >
             {loading ? (
               <span className="loading">Signing in...</span>
+            ) : !captchaVerified ? (
+              'Complete Security Check'
             ) : (
               'Sign In'
             )}
