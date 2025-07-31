@@ -12,9 +12,11 @@ import Events from './pages/Events';
 import Servers from './pages/Servers';
 import Newsletter from './pages/Newsletter';
 import Profile from './pages/Profile';
+import Chat from './pages/Chat';
 
 // Context
 import { AuthProvider } from './contexts/AuthContext';
+import { ChatProvider } from './contexts/ChatContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 
 // Styles
@@ -24,16 +26,18 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <Router>
-          <div className="App">
-            <Navbar />
-            <main className="main-content">
+        <ChatProvider>
+          <Router>
+            <div className="App">
+              <Navbar />
+              <main className="main-content">
               <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/events" element={<Events />} />
                 <Route path="/servers" element={<Servers />} />
+                <Route path="/chat" element={<Chat />} />
                 <Route path="/newsletter" element={<Newsletter />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
@@ -53,6 +57,7 @@ function App() {
             />
           </div>
         </Router>
+      </ChatProvider>
       </AuthProvider>
     </ThemeProvider>
   );

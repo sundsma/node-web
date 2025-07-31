@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'react-toastify';
-import { Calendar, MapPin, Users, Plus, Edit, Trash2, User } from 'lucide-react';
+import { Calendar, MapPin, Users, Plus, Edit, Trash2, User, MessageCircle } from 'lucide-react';
 import axios from 'axios';
 import './Events.css';
 
@@ -75,11 +75,17 @@ const Events = () => {
       return;
     }
 
+    if (!user) {
+      toast.error('User information not available. Please refresh the page.');
+      return;
+    }
+
     try {
-      await axios.post(`/api/events/${eventId}/join`);
+      const response = await axios.post(`/api/events/${eventId}/join`);
       toast.success('Successfully joined event');
       fetchEvents();
     } catch (error) {
+      console.error('Join event error:', error);
       toast.error(error.response?.data?.message || 'Failed to join event');
     }
   };
@@ -149,11 +155,93 @@ const Events = () => {
   };
 
   const isUserAttending = (event) => {
-    return event.attendees?.some(attendee => attendee._id === user?.id);
+    if (!user || !event.attendees) return false;
+    return event.attendees.some(attendee => {
+      // Handle both populated and non-populated attendees
+      const attendeeId = attendee._id || attendee;
+      const userId = user.id || user._id;
+      return attendeeId.toString() === userId.toString();
+    });
   };
 
   const canEditEvent = (event) => {
-    return user && (event.organizer._id === user.id || user.role === 'admin');
+    if (!user) return false;
+    const userId = user.id || user._id;
+    const organizerId = event.organizer._id || event.organizer;
+    return organizerId.toString() === userId.toString() || user.role === 'admin';
+  };
+
+  const createEventChat = async (eventId) => {
+    try {
+      const response = await axios.post(`/api/chat/events/${eventId}/thread`);
+      
+      if (response.data.message === 'Event thread already exists') {
+        toast.info('Event chat already exists');
+      } else {
+        toast.success('Event chat created successfully');
+      }
+      
+      fetchEvents(); // Refresh to get updated event data
+      
+      // Navigate to chat after a brief delay
+      setTimeout(() => {
+        window.location.href = '/chat';
+      }, 1500);
+    } catch (error) {
+      if (error.response?.status === 403) {
+        toast.error('Only event organizers can create event chats');
+      } else {
+        toast.error(error.response?.data?.message || 'Failed to create event chat');
+      }
+    }
+  };
+
+  const joinEventChat = async (eventId) => {
+    try {
+      // First check if thread exists
+      const response = await axios.get('/api/chat/threads');
+      const eventThread = response.data.threads.find(thread => 
+        thread.type === 'event' && thread.eventId === eventId
+      );
+      
+      if (eventThread) {
+        // Join existing thread and navigate
+        await axios.post(`/api/chat/threads/${eventThread._id}/join`);
+        window.location.href = '/chat';
+      } else {
+        // If no thread exists, show error (this shouldn't happen for attendees)
+        toast.error('Event chat not available yet. Ask the event organizer to create it.');
+      }
+    } catch (error) {
+      toast.error('Failed to join event chat');
+    }
+  };
+
+  const handleCreateOrJoinEventChat = async (event) => {
+    const isOrganizer = canEditEvent(event);
+    
+    if (isOrganizer) {
+      // Check if thread already exists
+      try {
+        const response = await axios.get('/api/chat/threads');
+        const eventThread = response.data.threads.find(thread => 
+          thread.type === 'event' && thread.eventId === event._id
+        );
+        
+        if (eventThread) {
+          // Thread exists, just navigate
+          window.location.href = '/chat';
+        } else {
+          // Create new thread
+          await createEventChat(event._id);
+        }
+      } catch (error) {
+        toast.error('Failed to access event chat');
+      }
+    } else {
+      // Regular attendee - join existing chat
+      joinEventChat(event._id);
+    }
   };
 
   if (loading) {
@@ -389,12 +477,23 @@ const Events = () => {
                   {isAuthenticated && !isEventPast(event.date) && (
                     <div className="attendance-actions">
                       {isUserAttending(event) ? (
-                        <button
-                          className="btn btn-danger"
-                          onClick={() => handleLeaveEvent(event._id)}
-                        >
-                          Leave Event
-                        </button>
+                        <>
+                          <button
+                            className="btn btn-danger"
+                            onClick={() => handleLeaveEvent(event._id)}
+                          >
+                            Leave Event
+                          </button>
+                          {/* Event Chat Button for Attendees */}
+                          <button
+                            className="btn btn-outline"
+                            onClick={() => handleCreateOrJoinEventChat(event)}
+                            title="Join Event Chat"
+                          >
+                            <MessageCircle size={16} />
+                            Chat
+                          </button>
+                        </>
                       ) : (
                         <button
                           className="btn btn-success"
@@ -409,6 +508,14 @@ const Events = () => {
 
                   {canEditEvent(event) && (
                     <div className="admin-actions">
+                      <button
+                        className="btn btn-outline"
+                        onClick={() => handleCreateOrJoinEventChat(event)}
+                        title="Create/Access Event Chat"
+                      >
+                        <MessageCircle size={16} />
+                        Chat
+                      </button>
                       <button
                         className="btn btn-outline"
                         onClick={() => handleEditEvent(event)}

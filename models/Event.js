@@ -41,7 +41,12 @@ const eventSchema = new mongoose.Schema({
   tags: [{
     type: String,
     trim: true
-  }]
+  }],
+  chatThread: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'ChatThread',
+    default: null
+  }
 }, {
   timestamps: true
 });
