@@ -99,6 +99,32 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const changePassword = async (currentPassword, newPassword) => {
+    try {
+      const response = await axios.put('/api/auth/change-password', {
+        currentPassword,
+        newPassword
+      });
+      return { success: true, message: response.data.message };
+    } catch (error) {
+      return { 
+        success: false, 
+        message: error.response?.data?.message || 'Password change failed' 
+      };
+    }
+  };
+
+  const refreshUser = async () => {
+    try {
+      const response = await axios.get('/api/auth/me');
+      setUser(response.data.user);
+      return { success: true, user: response.data.user };
+    } catch (error) {
+      console.error('Error refreshing user:', error);
+      return { success: false, message: 'Failed to refresh user data' };
+    }
+  };
+
   const hasServerAccess = (serverId) => {
     if (!user) return false;
     return user.serverAccess?.includes(serverId) || user.role === 'admin';
@@ -111,10 +137,13 @@ export const AuthProvider = ({ children }) => {
   const value = {
     user,
     loading,
+    token,
     login,
     register,
     logout,
     updateProfile,
+    changePassword,
+    refreshUser,
     hasServerAccess,
     isAdmin,
     isAuthenticated: !!user
