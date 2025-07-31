@@ -37,11 +37,20 @@ router.get('/profile', auth, async (req, res) => {
 // Update user profile
 router.put('/profile', auth, async (req, res) => {
   try {
-    const { username, email } = req.body;
+    const { username, email, newsletter, nameColor } = req.body;
     const updates = {};
 
     if (username) updates.username = username;
     if (email) updates.email = email;
+    if (typeof newsletter === 'boolean') updates.newsletter = newsletter;
+    if (nameColor) {
+      // Validate hex color format
+      if (/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(nameColor)) {
+        updates.nameColor = nameColor;
+      } else {
+        return res.status(400).json({ message: 'Invalid color format' });
+      }
+    }
 
     const updatedUser = await User.findByIdAndUpdate(
       req.user.userId,

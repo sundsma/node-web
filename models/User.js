@@ -38,6 +38,21 @@ const userSchema = new mongoose.Schema({
   isActive: {
     type: Boolean,
     default: true
+  },
+  profilePicture: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'ProfilePicture',
+    default: null
+  },
+  nameColor: {
+    type: String,
+    default: '#3b82f6', // Default blue color
+    validate: {
+      validator: function(v) {
+        return /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(v);
+      },
+      message: 'Name color must be a valid hex color code'
+    }
   }
 }, {
   timestamps: true
