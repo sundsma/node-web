@@ -5,6 +5,9 @@ A full-stack web application for TGSU community with user authentication, event 
 ## Features
 
 - 🎮 **Community Platform**: Gaming hub with user management
+- 💬 **Real-time Chat**: WebSocket-powered chat system with multiple threads
+- 🖼️ **Profile Pictures**: Upload and manage custom profile avatars
+- 🎨 **Custom Name Colors**: Personalize your username with custom colors
 - 🌓 **Dark/Light Theme**: Toggle between light and dark themes
 - 👥 **User Authentication**: Secure registration and login system
 - 📅 **Event Management**: Create, join, and manage gaming events
@@ -16,9 +19,11 @@ A full-stack web application for TGSU community with user authentication, event 
 
 ### Backend
 - Node.js & Express.js
-- LowDB used in development
+- MongoDB for data storage
+- WebSocket for real-time chat
 - JWT Authentication
 - bcrypt for password hashing
+- Multer for file uploads
 - CORS & Rate limiting
 
 ### Frontend
@@ -118,10 +123,20 @@ A full-stack web application for TGSU community with user authentication, event 
    PORT=5000
    NODE_ENV=development
    JWT_SECRET=your_jwt_secret_here
+   MONGODB_URI=mongodb://localhost:27017/node-web
    ```
 
 
-5. **Start the application**
+5. **Initialize the database**
+   ```bash
+   # Run the global chat initialization script
+   node initGlobalChat.js
+   
+   # Run the nameColor migration
+   node migrations/add-namecolor.js
+   ```
+
+6. **Start the application**
    
    **Option 1: Start both servers simultaneously**
    ```bash
@@ -142,7 +157,7 @@ A full-stack web application for TGSU community with user authentication, event 
    cd client && npm start
    ```
 
-6. **Access the application**
+7. **Access the application**
    - Frontend: http://localhost:3000
    - Backend API: http://localhost:5000
 
@@ -150,6 +165,11 @@ A full-stack web application for TGSU community with user authentication, event 
 
 ### Regular Users
 - Create and join events
+- Access real-time chat system
+- Upload and manage profile pictures
+- Customize username colors
+- Create and participate in chat threads
+- Start private conversations
 - View server connection details
 - Subscribe to newsletter
 - Update profile
@@ -172,6 +192,22 @@ A full-stack web application for TGSU community with user authentication, event 
 - `POST /api/auth/register` - User registration
 - `POST /api/auth/login` - User login
 - `GET /api/auth/me` - Get current user
+
+### Users & Profiles
+- `GET /api/users/profile` - Get user profile
+- `PUT /api/users/profile` - Update user profile
+- `POST /api/profilePicture/upload` - Upload profile picture
+- `DELETE /api/profilePicture` - Delete profile picture
+
+### Chat System
+- `GET /api/chat/threads` - Get chat threads
+- `POST /api/chat/threads` - Create new thread
+- `GET /api/chat/threads/:id/messages` - Get thread messages
+- `POST /api/chat/threads/:id/messages` - Send message
+- `POST /api/chat/threads/:id/join` - Join thread
+- `POST /api/chat/threads/:id/leave` - Leave thread
+- `POST /api/chat/threads/:id/mark-read` - Mark thread as read
+- `GET /api/chat/private/:userId` - Get/create private chat
 
 ### Events
 - `GET /api/events` - Get all events
@@ -206,13 +242,34 @@ The application starts with no default data. To get started make an admin accoun
      db.users.updateOne({ username: "yourusername" }, { $set: { role: "admin" } })
      ```
 
+## Chat System Features
+
+### Thread Types
+- **Global Chat**: Community-wide discussion thread
+- **Event Threads**: Automatically created for each event
+- **Custom Threads**: User-created discussion topics
+- **Private Messages**: Direct conversations between users
+
+### Chat Features
+- **Real-time Messaging**: Instant message delivery via WebSocket
+- **Thread Management**: Create, join, and leave chat threads
+- **Read Status**: Track unread message counts
+- **Profile Integration**: Display profile pictures and custom name colors
+- **Compact Layout**: Optimized message display with avatar alignment
+- **Connection Status**: Visual indicators for online/offline status
+- **Message History**: Persistent chat history with date separators
+
 ## Development Notes
 
 - The app uses JWT tokens for authentication
 - Passwords are hashed using bcrypt
+- Real-time chat powered by WebSocket connections
+- Profile pictures stored as base64 in MongoDB
 - Server access is controlled per user
 - Theme preference is stored in localStorage
 - All forms include validation and error handling
+- Chat messages support real-time delivery and read status
+- Custom name colors are validated as hex values
 
 ## Contributing
 
