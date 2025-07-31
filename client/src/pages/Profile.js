@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'react-toastify';
-import { User, Mail, Shield, Bell, Save, Eye, EyeOff } from 'lucide-react';
+import { User, Mail, Shield, Bell, Save, Eye, EyeOff, Palette } from 'lucide-react';
+import ProfilePictureUpload from '../components/ProfilePictureUpload';
 import './Profile.css';
 
 const Profile = () => {
-  const { user, updateProfile, isAuthenticated } = useAuth();
+  const { user, updateProfile, changePassword, isAuthenticated, refreshUser } = useAuth();
   const [formData, setFormData] = useState({
     username: '',
     email: '',
-    newsletter: false
+    newsletter: false,
+    nameColor: '#3b82f6'
   });
   const [loading, setLoading] = useState(false);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
@@ -29,7 +31,8 @@ const Profile = () => {
       setFormData({
         username: user.username || '',
         email: user.email || '',
-        newsletter: user.newsletter || false
+        newsletter: user.newsletter || false,
+        nameColor: user.nameColor || '#3b82f6'
       });
     }
   }, [user]);
@@ -66,18 +69,26 @@ const Profile = () => {
       return;
     }
 
+    setLoading(true);
+
     try {
-      // This would typically be a separate API endpoint
-      // For now, we'll show a success message
-      toast.success('Password updated successfully!');
-      setPasswordData({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: ''
-      });
-      setShowPasswordForm(false);
+      const result = await changePassword(passwordData.currentPassword, passwordData.newPassword);
+      
+      if (result.success) {
+        toast.success('Password updated successfully!');
+        setPasswordData({
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        });
+        setShowPasswordForm(false);
+      } else {
+        toast.error(result.message);
+      }
     } catch (error) {
       toast.error('Failed to update password');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -127,7 +138,16 @@ const Profile = () => {
       <div className="container">
         <div className="profile-header">
           <div className="profile-avatar">
-            <User size={48} />
+            <ProfilePictureUpload 
+              userId={user?.id || user?._id}
+              currentImage={user?.profilePicture}
+              onImageUpdate={async (imageData) => {
+                // Refresh user data to get updated profile picture
+                await refreshUser();
+                // Also dispatch custom event for navbar
+                window.dispatchEvent(new CustomEvent('profilePictureUpdated', { detail: imageData }));
+              }}
+            />
           </div>
           <div className="profile-info">
             <h1>Profile Settings</h1>
@@ -174,6 +194,33 @@ const Profile = () => {
                     className="form-control"
                     required
                   />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="nameColor" className="form-label">
+                    <Palette size={18} />
+                    Name Color
+                  </label>
+                  <div className="color-picker-container">
+                    <input
+                      type="color"
+                      id="nameColor"
+                      name="nameColor"
+                      value={formData.nameColor}
+                      onChange={handleInputChange}
+                      className="color-picker"
+                    />
+                    <span 
+                      className="color-preview" 
+                      style={{ 
+                        color: formData.nameColor,
+                        fontWeight: 'bold',
+                        marginLeft: '10px'
+                      }}
+                    >
+                      {formData.username || 'Username Preview'}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="form-group">
@@ -297,8 +344,8 @@ const Profile = () => {
                   </div>
 
                   <div className="password-form-actions">
-                    <button type="submit" className="btn btn-primary">
-                      Update Password
+                    <button type="submit" className="btn btn-primary" disabled={loading}>
+                      {loading ? 'Updating...' : 'Update Password'}
                     </button>
                     <button
                       type="button"
