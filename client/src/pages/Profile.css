@@ -138,7 +138,7 @@
   gap: 24px;
 }
 
-.form-group {
+.form-group-profile {
   display: grid;
   gap: 8px;
 }
@@ -146,10 +146,11 @@
 .form-label {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 14px;
   font-weight: 500;
   color: var(--text-color);
   font-size: 0.9rem;
+  line-height: 1;
 }
 
 .form-control {

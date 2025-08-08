@@ -43,9 +43,9 @@ const Profile = () => {
 
     try {
       const result = await updateProfile(formData);
-      
       if (result.success) {
         toast.success('Profile updated successfully!');
+        await refreshUser();
       } else {
         toast.error(result.message);
       }
@@ -164,7 +164,7 @@ const Profile = () => {
               </div>
 
               <form onSubmit={handleProfileUpdate} className="profile-form">
-                <div className="form-group">
+                <div className="form-group-profile">
                   <label htmlFor="username" className="form-label">
                     <User size={18} />
                     Username
@@ -180,7 +180,7 @@ const Profile = () => {
                   />
                 </div>
 
-                <div className="form-group">
+                <div className="form-group-profile">
                   <label htmlFor="email" className="form-label">
                     <Mail size={18} />
                     Email Address
@@ -196,7 +196,7 @@ const Profile = () => {
                   />
                 </div>
 
-                <div className="form-group">
+                <div className="form-group-profile">
                   <label htmlFor="nameColor" className="form-label">
                     <Palette size={18} />
                     Name Color
@@ -223,7 +223,7 @@ const Profile = () => {
                   </div>
                 </div>
 
-                <div className="form-group">
+                <div className="form-group-profile">
                   <label className="checkbox-label">
                     <input
                       type="checkbox"
@@ -271,7 +271,7 @@ const Profile = () => {
 
               {showPasswordForm && (
                 <form onSubmit={handlePasswordChange} className="password-form">
-                  <div className="form-group">
+                  <div className="form-group-profile">
                     <label htmlFor="currentPassword" className="form-label">
                       Current Password
                     </label>
@@ -295,7 +295,7 @@ const Profile = () => {
                     </div>
                   </div>
 
-                  <div className="form-group">
+                  <div className="form-group-profile">
                     <label htmlFor="newPassword" className="form-label">
                       New Password
                     </label>
@@ -319,7 +319,7 @@ const Profile = () => {
                     </div>
                   </div>
 
-                  <div className="form-group">
+                  <div className="form-group-profile">
                     <label htmlFor="confirmPassword" className="form-label">
                       Confirm New Password
                     </label>
