@@ -14,7 +14,8 @@ import {
   X,
   Settings,
   UserPlus,
-  LogOut
+  LogOut,
+  Trash2
 } from 'lucide-react';
 import axios from 'axios';
 import './Chat.css';
@@ -196,6 +197,18 @@ const Chat = () => {
     }
   };
 
+   // Delete message handler
+  const handleDeleteMessage = async (messageId) => {
+    if (!window.confirm('Delete this message?')) return;
+    try {
+      await axios.delete(`/api/chat/messages/${messageId}`);
+      setMessages(prev => prev.map(m => m._id === messageId ? { ...m, isDeleted: true } : m));
+      toast.success('Message deleted');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to delete message');
+    }
+  };
+
   const createThread = async (e) => {
     e.preventDefault();
     if (!newThreadForm.title.trim()) return;
@@ -332,6 +345,40 @@ const Chat = () => {
     return thread.title;
   };
 
+  // Helper to render Tenor GIFs as <img> tags
+function renderMessageContent(content) {
+  if (!content) return null;
+  // Regex to match Tenor GIF links (e.g., https://media.tenor.com/...)
+  const tenorRegex = /(https?:\/\/(?:media1\.)?tenor\.com\/[\w\-\.\/?=&%#]+\.(?:gif|mp4|webp))/gi;
+  const parts = [];
+  let lastIndex = 0;
+  let match;
+  let key = 0;
+  while ((match = tenorRegex.exec(content)) !== null) {
+    // Push text before the match
+    if (match.index > lastIndex) {
+      parts.push(React.createElement('span', { key: key++ }, content.slice(lastIndex, match.index)));
+    }
+    // Push the GIF as an image
+    parts.push(
+      React.createElement('img', {
+        key: key++,
+        src: match[1],
+        alt: 'GIF',
+        className: 'chat-gif',
+        style: { maxWidth: '220px', maxHeight: '220px', borderRadius: '10px', margin: '8px 0', display: 'block' }
+      })
+    );
+    lastIndex = match.index + match[0].length;
+  }
+  // Push any remaining text
+  if (lastIndex < content.length) {
+    parts.push(React.createElement('span', { key: key++ }, content.slice(lastIndex)));
+  }
+  return parts.length > 0 ? parts : content;
+}
+
+
   if (!isAuthenticated) {
     return (
       <div className="chat-container">
@@ -451,11 +498,6 @@ const Chat = () => {
                     </div>
                   )}
                 </div>
-                <div className="chat-header-actions">
-                  <button className="btn btn-outline btn-sm">
-                    <Settings size={16} />
-                  </button>
-                </div>
               </div>
 
               {/* Messages Area */}
@@ -511,8 +553,23 @@ const Chat = () => {
                                 {formatTime(message.createdAt)}
                               </span>
                             </div>
-                            <div className="message-text">
-                              {message.content}
+                            <div className="message-text" style={{ display: 'flex', alignItems: 'center' }}>
+                              <span style={{ flex: 1 }}>{
+                                message.isDeleted
+                                  ? <span style={{ color: '#888', fontStyle: 'italic' }}>[deleted]</span>
+                                  : renderMessageContent(message.content)
+                              }</span>
+                              {/* Delete icon for own messages or admin */}
+                              {!message.isDeleted && (user?.id === message.sender?._id || user?.id === message.sender?.id || user?.role === 'admin') && (
+                                <button
+                                  className="delete-message-btn"
+                                  title="Delete message"
+                                  style={{ background: 'none', border: 'none', cursor: 'pointer', marginLeft: 8, color: '#e53e3e' }}
+                                  onClick={() => handleDeleteMessage(message._id)}
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              )}
                             </div>
                           </div>
                         </React.Fragment>

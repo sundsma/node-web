@@ -315,6 +315,41 @@ router.post('/threads/:threadId/messages', auth, async (req, res) => {
   }
 });
 
+// Delete a message (user can delete own, admin can delete any)
+router.delete('/messages/:messageId', auth, async (req, res) => {
+  try {
+    const { messageId } = req.params;
+    const userId = req.user.userId;
+
+    const message = await ChatMessage.findById(messageId).populate('sender', 'id _id');
+    if (!message) {
+      return res.status(404).json({ message: 'Message not found' });
+    }
+
+    // Only allow if user is sender or admin
+    const user = await User.findById(userId);
+    const isSender = message.sender._id?.toString() === userId.toString() || message.sender.id?.toString() === userId.toString();
+    const isAdmin = user && user.role === 'admin';
+    if (!isSender && !isAdmin) {
+      return res.status(403).json({ message: 'Not authorized to delete this message' });
+    }
+
+    // Soft delete: set isDeleted flag
+    message.isDeleted = true;
+    await message.save();
+
+    // Optionally, broadcast deletion to clients (if using websockets)
+    if (req.app.locals.broadcastToThread) {
+      req.app.locals.broadcastToThread(message.thread.toString(), { _id: message._id, isDeleted: true, deletedBy: userId }, userId, 'delete');
+    }
+
+    res.json({ message: 'Message deleted' });
+  } catch (error) {
+    console.error('Error deleting message:', error);
+    res.status(500).json({ message: 'Failed to delete message' });
+  }
+});
+
 // Get private chat with another user
 router.get('/private/:otherUserId', auth, async (req, res) => {
   try {
