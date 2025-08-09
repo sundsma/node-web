@@ -93,9 +93,7 @@ const Navbar = () => {
               {theme === 'light' ? '🌙' : '☀️'}
             </button>
 
-            {isAuthenticated ? (
-              <div className="profile-dropdown">
-                {/* Message Notifications */}
+          {/* Message Notifications */}
                 <div className="message-notifications">
                   <button 
                     className="message-button"
@@ -154,6 +152,8 @@ const Navbar = () => {
                   )}
                 </div>
 
+            {isAuthenticated ? (
+              <div className="profile-dropdown">
                 <button 
                   className="profile-button"
                   onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}

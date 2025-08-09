@@ -466,7 +466,7 @@
 }
 
 .modal {
-  background: var(--surface-color);
+  background: var(--border-color);
   border-radius: 8px;
   width: 90%;
   max-width: 500px;
